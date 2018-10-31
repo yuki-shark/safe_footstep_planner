@@ -1,0 +1,92 @@
+<launch>
+
+  <arg name="gui" default="true" />
+
+  <node name="sample_manager"
+        pkg="nodelet" type="nodelet"
+        args="manager"
+        output="screen"
+        respawn="true">
+  </node>
+
+  <node name="crop_image"
+        pkg="nodelet" type="nodelet"
+        args="load image_proc/crop_decimate sample_manager"
+        output="screen"
+        respawn="true">
+    <remap from="camera/image_raw" to="zed/left/image_raw_color"/>
+    <remap from="zed/left/camera_info" to="zed/left/camera_info_raw"/>
+    <remap from="camera_out/image_raw" to="zed/left/cropped_image"/>
+    <remap from="camera_out/camera_info" to="zed/left/cropped_camera_info"/>
+    <rosparam>
+      queue_size: 10
+      decimation_x: 1
+      decimation_y: 1
+      x_offset: 300
+      y_offset: 100
+      width: 100
+      height: 200
+      interpolation: 0
+    </rosparam>
+  </node>
+
+  <!-- <node name="image_publisher" -->
+  <!--       pkg="jsk_perception" type="image_publisher.py"> -->
+  <!--   <rosparam subst_value="true"> -->
+  <!--     file_name: $(find jsk_perception)/sample/image/laugh_out_loud_joke_book.jpg -->
+  <!--   </rosparam> -->
+  <!-- </node> -->
+
+  <!-- <node name="mask_image_generator" -->
+  <!--       pkg="jsk_perception" type="mask_image_generator"> -->
+  <!--   <remap from="~input" to="zed/left/image_raw_color" /> -->
+  <!--   <rosparam> -->
+  <!--     offset_x: 300 -->
+  <!--     offset_y: 100 -->
+  <!--     width: 100 -->
+  <!--     height: 200 -->
+  <!--   </rosparam> -->
+  <!-- </node> -->
+
+  <!-- <node name="mask_image_to_rect" -->
+  <!--       pkg="jsk_perception" type="mask_image_to_rect"> -->
+  <!--   <remap from="~input" to="mask_image_generator/output" /> -->
+  <!-- </node> -->
+  <node name="rects_generator"
+        pkg="safe_footstep_planner" type="rect_publisher">
+  </node>
+
+  <node name="draw_rects"
+        pkg="jsk_perception" type="draw_rects">
+    <remap from="~input" to="zed/left/image_raw_color" />
+    <remap from="~input/rects" to="mask_image_to_rect/output" />
+    <rosparam>
+      rect_boldness: 5
+    </rosparam>
+  </node>
+
+  <group if="$(arg gui)">
+    <!-- <node name="raw_image_viz" -->
+    <!--       pkg="image_view" type="image_view" -->
+    <!--       output="screen" -->
+    <!--       respawn="true"> -->
+    <!--   <remap from="image" to="zed/left/image_raw_color"/> -->
+    <!-- </node> -->
+
+    <node name="cropped_image_viz"
+          pkg="image_view" type="image_view"
+          output="screen"
+          respawn="true">
+      <remap from="image" to="zed/left/cropped_image"/>
+    </node>
+    <!-- <node name="image_view0" -->
+    <!--       pkg="image_view" type="image_view"> -->
+    <!--   <remap from="image" to="mask_image_generator/output" /> -->
+    <!-- </node> -->
+    <node name="image_view1"
+          pkg="image_view" type="image_view">
+      <remap from="image" to="draw_rects/output" />
+    </node>
+  </group>
+
+</launch>
