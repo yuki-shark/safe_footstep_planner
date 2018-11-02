@@ -52,8 +52,16 @@
   <!--       pkg="jsk_perception" type="mask_image_to_rect"> -->
   <!--   <remap from="~input" to="mask_image_generator/output" /> -->
   <!-- </node> -->
-  <node name="rects_generator"
+  <node name="rect_publisher"
         pkg="safe_footstep_planner" type="rect_publisher">
+    <!-- <param name="offset_x" value="300" /> -->
+    <!-- <rosparam subst_value="true"> -->
+    <rosparam>
+      offset_x: 300
+      offset_y: 100
+      width: 100
+      height: 200
+    </rosparam>
   </node>
 
   <node name="draw_rects"
