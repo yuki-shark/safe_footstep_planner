@@ -30,32 +30,10 @@
     </rosparam>
   </node>
 
-  <!-- <node name="image_publisher" -->
-  <!--       pkg="jsk_perception" type="image_publisher.py"> -->
-  <!--   <rosparam subst_value="true"> -->
-  <!--     file_name: $(find jsk_perception)/sample/image/laugh_out_loud_joke_book.jpg -->
-  <!--   </rosparam> -->
-  <!-- </node> -->
-
-  <!-- <node name="mask_image_generator" -->
-  <!--       pkg="jsk_perception" type="mask_image_generator"> -->
-  <!--   <remap from="~input" to="zed/left/image_raw_color" /> -->
-  <!--   <rosparam> -->
-  <!--     offset_x: 300 -->
-  <!--     offset_y: 100 -->
-  <!--     width: 100 -->
-  <!--     height: 200 -->
-  <!--   </rosparam> -->
-  <!-- </node> -->
-
-  <!-- <node name="mask_image_to_rect" -->
-  <!--       pkg="jsk_perception" type="mask_image_to_rect"> -->
-  <!--   <remap from="~input" to="mask_image_generator/output" /> -->
-  <!-- </node> -->
   <node name="rect_publisher"
         pkg="safe_footstep_planner" type="rect_publisher">
-    <!-- <param name="offset_x" value="300" /> -->
-    <!-- <rosparam subst_value="true"> -->
+    <remap from="~camera_info" to="zed/left/camera_info_raw" />
+    <!-- <remap from="~input/rects" to="mask_image_to_rect/output" /> -->
     <rosparam>
       offset_x: 300
       offset_y: 100
@@ -67,30 +45,19 @@
   <node name="draw_rects"
         pkg="jsk_perception" type="draw_rects">
     <remap from="~input" to="zed/left/image_raw_color" />
-    <remap from="~input/rects" to="mask_image_to_rect/output" />
+    <remap from="~input/rects" to="rect_publisher/output" />
     <rosparam>
       rect_boldness: 5
     </rosparam>
   </node>
 
   <group if="$(arg gui)">
-    <!-- <node name="raw_image_viz" -->
-    <!--       pkg="image_view" type="image_view" -->
-    <!--       output="screen" -->
-    <!--       respawn="true"> -->
-    <!--   <remap from="image" to="zed/left/image_raw_color"/> -->
-    <!-- </node> -->
-
     <node name="cropped_image_viz"
           pkg="image_view" type="image_view"
           output="screen"
           respawn="true">
       <remap from="image" to="zed/left/cropped_image"/>
     </node>
-    <!-- <node name="image_view0" -->
-    <!--       pkg="image_view" type="image_view"> -->
-    <!--   <remap from="image" to="mask_image_generator/output" /> -->
-    <!-- </node> -->
     <node name="image_view1"
           pkg="image_view" type="image_view">
       <remap from="image" to="draw_rects/output" />

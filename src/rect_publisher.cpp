@@ -25,8 +25,8 @@ private:
 
 MaskImage::MaskImage() : nh_(""), private_nh_("~")
 {
-    rect_publisher_ = nh_.advertise<jsk_recognition_msgs::RectArray>("mask_image_to_rect/output", 1);
-    camera_info_subscriber_ = nh_.subscribe("zed/left/camera_info_raw", 1, &MaskImage::cameraInfoCallback, this);
+    rect_publisher_ = private_nh_.advertise<jsk_recognition_msgs::RectArray>("output", 1);
+    camera_info_subscriber_ = private_nh_.subscribe("camera_info", 1, &MaskImage::cameraInfoCallback, this);
 }
 
 
