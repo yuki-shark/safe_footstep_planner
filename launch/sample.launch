@@ -1,6 +1,7 @@
 <launch>
 
-  <arg name="gui" default="true" />
+  <arg name="gui" default="false" />
+  <arg name="save_image" default="true" />
 
   <node name="sample_manager"
         pkg="nodelet" type="nodelet"
@@ -27,6 +28,24 @@
       width: 100
       height: 200
       interpolation: 0
+    </rosparam>
+  </node>
+
+  <node name="data_collection_server"
+        pkg="jsk_data" type="data_collection_server.py"
+        output="screen"
+        clear_params="true">
+    <rosparam>
+      save_dir: ~/.ros/jsk_data/
+      topics:
+        - name: /zed/left/cropped_image
+          msg_class: sensor_msgs/Image
+          fname: cropped_image.png
+          savetype: ColorImage
+        <!-- - name: /zed/left/camera_info_raw -->
+        <!--   fname: info.yaml -->
+        <!--   savetype: YAML -->
+        <!--   msg_class: sensor_msgs/CameraInfo -->
     </rosparam>
   </node>
 

@@ -5,7 +5,6 @@
 #include <std_msgs/Header.h>
 
 #include <sstream>
-// #include <copy>
 
 class MaskImage
 {
