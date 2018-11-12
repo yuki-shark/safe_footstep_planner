@@ -5,7 +5,7 @@
   <arg name="camera1_serial_id" default="16042710004" />  <!-- ASTRA -->
   <arg name="camera2_serial_id" default="16091910045" />  <!-- ASTRA S -->
   <arg name="openni2" default="false" />
-  <arg name="rviz" default="true" />
+  <arg name="rviz" default="false" />
   <arg name="use_default_camera_frames" default="false" />
 
   <!-- use openni2 launch -->
@@ -57,6 +57,6 @@
 
   <node type="rviz" name="rviz" pkg="rviz" args="-d $(find safe_footstep_planner)/config/dual_astra.rviz" if="$(arg rviz)"/>
 
-  <node pkg="tf" type="static_transform_publisher" name="virtual_camera_broadcaster" args="0.5 0.0 0.3 1.5707 3.14159 0.0 camera_origin static_virtual_camera 100" />
+  <!-- <node pkg="tf" type="static_transform_publisher" name="virtual_camera_broadcaster" args="0.5 0.0 0.3 1.5707 3.14159 0.0 camera_origin static_virtual_camera 100" /> -->
 
 </launch>

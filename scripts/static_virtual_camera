@@ -34,6 +34,11 @@ if __name__ == '__main__':
     # imgmsg.header.frame_id = 'static_virtual_camera'
 
     info_msg = CameraInfo()
+    info_msg.D = [-0.071069, 0.024841, -6.7e-05, 0.024236, 0.0]
+    info_msg.K = [496.734185, 0.0, 368.095466, 0.0, 491.721745, 248.578629, 0.0, 0.0, 1.0]
+    info_msg.R = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+    info_msg.P = [471.903168, 0.0, 386.903326, 0.0, 0.0, 489.443268, 248.733955, 0.0, 0.0, 0.0, 1.0, 0.0]
+
     # info_msg.header.frame_id = imgmsg.header.frame_id
     info_msg.header.frame_id = 'static_virtual_camera'
 
