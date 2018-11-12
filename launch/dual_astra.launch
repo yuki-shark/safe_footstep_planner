@@ -1,0 +1,62 @@
+<launch>
+
+  <arg name="camera1" default="camera1" />
+  <arg name="camera2" default="camera2" />
+  <arg name="camera1_serial_id" default="16042710004" />  <!-- ASTRA -->
+  <arg name="camera2_serial_id" default="16091910045" />  <!-- ASTRA S -->
+  <arg name="openni2" default="false" />
+  <arg name="rviz" default="true" />
+  <arg name="use_default_camera_frames" default="false" />
+
+  <!-- use openni2 launch -->
+  <group if="$(arg openni2)">
+    <include file="$(find openni2_launch)/launch/openni2.launch">
+      <arg name="camera" value="$(arg camera1)" />
+      <arg name="device_id" value="$(arg camera1_serial_id)" />
+      <arg name="rgb_camera_info_url" value="file://$(find safe_footstep_planner)/camera_info/$(arg camera1_serial_id).yaml" />
+      <arg name="publish_tf" value="$(arg use_default_camera_frames)" />
+    </include>
+
+    <include file="$(find openni2_launch)/launch/openni2.launch">
+      <arg name="camera" value="$(arg camera2)" />
+      <arg name="device_id" value="$(arg camera2_serial_id)" />
+      <arg name="rgb_camera_info_url" value="file://$(find safe_footstep_planner)/camera_info/$(arg camera2_serial_id).yaml" />
+      <arg name="publish_tf" value="$(arg use_default_camera_frames)" />
+    </include>
+  </group>
+
+  <!-- use astra launch -->
+  <group unless="$(arg openni2)">
+    <include file="$(find astra_launch)/launch/astra.launch">
+      <arg name="camera" value="$(arg camera1)" />
+      <arg name="device_id" value="$(arg camera1_serial_id)" />
+      <arg name="rgb_camera_info_url" value="file://$(find safe_footstep_planner)/camera_info/$(arg camera1_serial_id).yaml" />
+      <arg name="publish_tf" value="$(arg use_default_camera_frames)" />
+    </include>
+
+    <include file="$(find astra_launch)/launch/astra.launch">
+      <arg name="camera" value="$(arg camera2)" />
+      <arg name="device_id" value="$(arg camera2_serial_id)" />
+      <arg name="rgb_camera_info_url" value="file://$(find safe_footstep_planner)/camera_info/$(arg camera2_serial_id).yaml" />
+      <arg name="publish_tf" value="$(arg use_default_camera_frames)" />
+    </include>
+  </group>
+
+  <!-- publish tf  -->
+  <group unless="$(arg use_default_camera_frames)">
+    <include file="$(find safe_footstep_planner)/launch/includes/astra_frames_$(arg camera1_serial_id).launch">
+      <arg name="camera" value="$(arg camera1)" />
+    </include>
+    <include file="$(find safe_footstep_planner)/launch/includes/astra_frames_$(arg camera2_serial_id).launch">
+      <arg name="camera" value="$(arg camera2)" />
+    </include>
+  </group>
+
+  <node pkg="tf" type="static_transform_publisher" name="$(arg camera1)_tf_broadcaster" args="0.0 0.0 -0.085 0.0 1.5707963267948966 0.0 camera_origin $(arg camera1)_link 100" />
+  <node pkg="tf" type="static_transform_publisher" name="$(arg camera2)_tf_broadcaster" args="0.05273 0.0 -0.0 0.0 0.8726646259971648 0.0 camera_origin $(arg camera2)_link 100" />
+
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find safe_footstep_planner)/config/dual_astra.rviz" if="$(arg rviz)"/>
+
+  <node pkg="tf" type="static_transform_publisher" name="virtual_camera_broadcaster" args="0.5 0.0 0.3 1.5707 3.14159 0.0 camera_origin static_virtual_camera 100" />
+
+</launch>

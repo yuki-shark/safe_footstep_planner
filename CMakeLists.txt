@@ -150,8 +150,8 @@ include_directories(
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
-add_executable(mask_image src/mask_image.cpp)
-target_link_libraries(mask_image ${catkin_LIBRARIES})
+# add_executable(mask_image src/mask_image.cpp)
+# target_link_libraries(mask_image ${catkin_LIBRARIES})
 add_executable(rect_publisher src/rect_publisher.cpp)
 target_link_libraries(rect_publisher ${catkin_LIBRARIES})
 # add_dependencies(mask_image beginner_tutorials_generate_messages_cpp)
