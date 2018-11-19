@@ -6,13 +6,10 @@
   <node name="$(arg MANAGER)"
         pkg="nodelet" type="nodelet" args="manager" />
 
-  <!-- <node pkg="tf" type="static_transform_publisher" name="virtual_camera_broadcaster" args="0.5 0.0 0.3 0.0 1.5707963267948966 0.0 camera_origin static_virtual_camera 100" /> -->
-
   <!-- make static virtual camera -->
   <node pkg="safe_footstep_planner" name="static_virtual_camera" type="static_virtual_camera" output="screen" />
-  <group if="$(arg interactive_marker)">
-    <include file="$(find safe_footstep_planner)/launch/tf_interactive_marker.launch" />
-  </group>
+  <include file="$(find safe_footstep_planner)/launch/tf_interactive_marker.launch" if="$(arg interactive_marker)" />
+  <node pkg="tf" type="static_transform_publisher" name="virtual_camera_broadcaster" args="0.5 0.0 0.3 0.0 1.5707963267948966 0.0 camera_origin static_virtual_camera 100" unless="$(arg interactive_marker)" />
 
   <!-- concatenate pointcloud -->
   <node name="concatenate_data"
@@ -33,12 +30,71 @@
         args="load jsk_pcl/DepthImageCreator /$(arg MANAGER)">
     <remap from="~input" to="/concatenate_data/output" />
     <remap from="~info" to="/static_virtual_camera/camera_info" />
+    <!-- <remap from="~info" to="/camera2/rgb/camera_info" /> -->
     <rosparam>
       use_approximate: true
       max_queue_size: 20
     </rosparam>
   </node>
 
+  <!-- make organized PCL from rgb and depth images -->
+  <node name="points_xyzrgb_sw_registered"
+        pkg="nodelet" type="nodelet"
+        args="load depth_image_proc/point_cloud_xyzrgb /$(arg MANAGER)"
+        respawn="true" >
+    <!-- args="standalone depth_image_proc/point_cloud_xyzrgb" -->
+    <!-- Explicit topic remappings, shouldn't need all of these -->
+    <remap from="rgb/image_rect_color"        to="/depth_image_creator/output_image" />
+    <remap from="rgb/camera_info"             to="/static_virtual_camera/camera_info" />
+    <remap from="depth_registered/image_rect" to="/depth_image_creator/output" />
+    <remap from="depth_registered/points"     to="/depth_image_creator/output/points" />
+    <rosparam>
+      queue_size: 20
+    </rosparam>
+  </node>
+
+  <!-- color filter for image from the virtual camera -->
+  <include file="$(find opencv_apps)/launch/hsv_color_filter.launch" >
+    <arg name="node_name" value="hsv_color_filter" />
+    <arg name="image" value="/depth_image_creator/output_image" />
+    <!-- light green -->
+    <!-- <arg name="h_limit_max" value="150" doc="The maximum allowed field value Hue" /> -->
+    <!-- <arg name="h_limit_min" value="100" doc="The minimum allowed field value Hue" /> -->
+    <!-- <arg name="s_limit_max" value="167" doc="The maximum allowed field value Saturation" /> -->
+    <!-- <arg name="s_limit_min" value="139" doc="The minimum allowed field value Saturation" /> -->
+    <!-- <arg name="v_limit_max" value="256" doc="The maximum allowed field value Value" /> -->
+    <!-- <arg name="v_limit_min" value="222" doc="The minimum allowed field value Value" /> -->
+    <!-- orange -->
+    <arg name="h_limit_max" value="9" doc="The maximum allowed field value Hue" />
+    <arg name="h_limit_min" value="25" doc="The minimum allowed field value Hue" />
+    <arg name="s_limit_max" value="194" doc="The maximum allowed field value Saturation" />
+    <arg name="s_limit_min" value="241" doc="The minimum allowed field value Saturation" />
+    <arg name="v_limit_max" value="239" doc="The maximum allowed field value Value" />
+    <arg name="v_limit_min" value="255" doc="The minimum allowed field value Value" />
+    <arg name="debug_view" value="false" />
+  </include>
+
+  <!-- make point indices from filtered image -->
+  <node name="mask_to_point_indices"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_pcl_utils/MaskImageToPointIndices $(arg MANAGER)">
+    <remap from="~input" to="/hsv_color_filter/image" />  <!-- rgb timestamp -->
+  </node>
+
+  <!-- extract PCL -->
+  <node name="extract_indices_target_label"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_pcl/ExtractIndices $(arg MANAGER)">
+    <remap from="~input" to="/depth_image_creator/output/points" />  <!-- depth timestamp -->
+    <remap from="~indices" to="/mask_to_point_indices/output" />  <!-- rgb timestamp -->
+    <rosparam>
+      approximate_sync: true
+      queue_size: 100
+      keep_organized: true
+    </rosparam>
+  </node>
+
+  <!-- rviz -->
   <node type="rviz" name="rviz" pkg="rviz" args="-d $(find safe_footstep_planner)/config/depth_image_creator.rviz" if="$(arg rviz)"/>
 
 </launch>
