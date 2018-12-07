@@ -71,6 +71,7 @@
     <node name="pointcloud_xyzi_to_xyz"
           pkg="jsk_pcl_ros_utils" type="pointcloud_xyzi_to_xyz">
       <remap from="~input" to="/accumulated_heightmap_pointcloud_static/output" />
+      <!-- <remap from="~input" to="/assemble_cloud" /> -->
       <remap from="~output" to="/laser_pointcloud/output" />
     </node>
 
@@ -81,17 +82,6 @@
       <remap from="~output" to="/cameras_pointcloud/output" />
     </node>
 
-    <!-- change pointcloud frame id to /map -->
-    <node name="tf_transform_cameras_pointcloud"
-          pkg="nodelet" type="nodelet"
-          args="load jsk_pcl_utils/TfTransformCloud /$(arg MANAGER)">
-      <remap from="~input" to="/cameras_pointcloud/output" />
-      <remap from="~output" to="/camera_pointcloud_map/output" />
-      <rosparam>
-        target_frame_id: map
-      </rosparam>
-    </node>
-
     <!-- concatenate laser and cameras pointcloud -->
     <node name="concatenate_all_pointcloud"
           pkg="nodelet" type="nodelet"
@@ -100,7 +90,7 @@
         output_frame: /map
         input_topics:
         - /laser_pointcloud/output
-        - /camera_pointcloud_map/output
+        - /cameras_pointcloud/output
         approximate_sync: true
       </rosparam>
     </node>
@@ -113,7 +103,7 @@
       <remap from="~info" to="/static_virtual_camera/camera_info" />
       <rosparam>
         use_approximate: true
-        max_queue_size: 20
+        max_queue_size: 50
       </rosparam>
     </node>
   </group>
@@ -129,7 +119,10 @@
     <remap from="depth_registered/image_rect" to="/depth_image_creator_laser/output"       if="$(arg use_laser_pointcloud)"/>
     <remap from="depth_registered/image_rect" to="/depth_image_creator/output"             unless="$(arg use_laser_pointcloud)"/>
     <remap from="depth_registered/points"     to="/depth_image_creator/output/points" />
-    <rosparam>
+    <rosparam if="$(arg use_laser_pointcloud)">
+      queue_size: 100
+    </rosparam>
+    <rosparam unless="$(arg use_laser_pointcloud)">
       queue_size: 20
     </rosparam>
   </node>
@@ -140,7 +133,12 @@
         args="load jsk_pcl/ExtractIndices $(arg MANAGER)">
     <remap from="~input" to="/depth_image_creator/output/points"/>  <!-- depth timestamp -->
     <remap from="~indices" to="/mask_to_point_indices/output" />  <!-- rgb timestamp -->
-    <rosparam>
+    <rosparam if="$(arg use_laser_pointcloud)">
+      approximate_sync: true
+      queue_size: 300
+      keep_organized: true
+    </rosparam>
+    <rosparam unless="$(arg use_laser_pointcloud)">
       approximate_sync: true
       queue_size: 100
       keep_organized: true
