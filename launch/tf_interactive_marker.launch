@@ -3,14 +3,14 @@
   <node name="marker_6dof"
         pkg="jsk_interactive_marker" type="marker_6dof" >
     <rosparam>
-      frame_id: camera2_link
+      frame_id: BODY
       object_type: none
       tf_frame: static_virtual_camera
       publish_tf: true
-      initial_x: 0.0
+      initial_x: 1.6
       initial_y: 0.0
-      initial_z: 0.0
-      initial_orientation: [0.0, 1.5707, 0.0, 1.0]
+      initial_z: 0.08
+      initial_orientation: [-0.707107, 0.707107, 0, 0]
     </rosparam>
   </node>
 
