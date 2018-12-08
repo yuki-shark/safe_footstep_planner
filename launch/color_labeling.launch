@@ -1,4 +1,5 @@
 <launch>
+  <arg name="gui" default="true" />
 
   <!-- sample rosbag play -->
   <node name="sample_rosbag_play" pkg="rosbag" type="play"
@@ -64,5 +65,9 @@
 
   <!-- masked images to label -->
   <node name="maske_images_to_label" pkg="safe_footstep_planner" type="masked_image_to_label"/>
+
+  <node name="label_image_viewer" pkg="image_view" type="image_view" if="$(arg gui)">
+    <remap from="image" to="/label_image" />
+  </node>
 
 </launch>

@@ -22,10 +22,11 @@ class image_converter:
     self.data_red_sub = message_filters.Subscriber("/red_color_filter/image", Image)
     self.data_green_sub = message_filters.Subscriber("/green_color_filter/image", Image)
     self.data_blue_sub = message_filters.Subscriber("/blue_color_filter/image", Image)
-    self.ts = message_filters.ApproximateTimeSynchronizer([self.data_red_sub, self.data_green_sub, self.data_blue_sub], 10, 0.01)
+    self.data_yellow_sub = message_filters.Subscriber("/yellow_color_filter/image", Image)
+    self.ts = message_filters.ApproximateTimeSynchronizer([self.data_red_sub, self.data_green_sub, self.data_blue_sub, self.data_yellow_sub], 10, 0.01)
     self.ts.registerCallback(self.callback)
 
-  def callback(self, data_red, data_green, data_blue):
+  def callback(self, data_red, data_green, data_blue, data_yellow):
     try:
       cv_image_red = self.bridge.imgmsg_to_cv2(data_red, "mono8")
     except CvBridgeError as e:
@@ -38,13 +39,18 @@ class image_converter:
       cv_image_blue = self.bridge.imgmsg_to_cv2(data_blue, "mono8")
     except CvBridgeError as e:
       print(e)
+    try:
+      cv_image_yellow = self.bridge.imgmsg_to_cv2(data_yellow, "mono8")
+    except CvBridgeError as e:
+      print(e)
 
     label_image = np.zeros(cv_image_red.shape)
 
     # set labels as num
-    label_image += cv_image_red   * 1.0/255 * 1  # Label 1
-    label_image += cv_image_green * 1.0/255 * 2  # Label 2
-    label_image += cv_image_blue  * 1.0/255 * 3  # Label 3
+    label_image += cv_image_red    * 1.0/255 * 1  # Label 1
+    label_image += cv_image_green  * 1.0/255 * 2  # Label 2
+    label_image += cv_image_blue   * 1.0/255 * 3  # Label 3
+    label_image += cv_image_yellow * 1.0/255 * 4  # Label 4
 
     # convert type to "32SC1"
     label_image = label_image.astype(np.int32)
