@@ -2,7 +2,7 @@
 
   <!-- sample rosbag play -->
   <node name="sample_rosbag_play" pkg="rosbag" type="play"
-        args="$(find safe_footstep_planner)/bagfiles/sample_color.bag -l"
+        args="$(find safe_footstep_planner)/bagfiles/sample_four_colors.bag -l"
         output="screen">
   </node>
 
@@ -10,13 +10,13 @@
   <include file="$(find opencv_apps)/launch/hsv_color_filter.launch" >
     <arg name="node_name" value="red_color_filter" />
     <arg name="image" value="/camera/rgb/image_raw" />
-    <!-- params for red -->
-    <arg name="h_limit_max" value="35" doc="The maximum allowed field value Hue" />
-    <arg name="h_limit_min" value="304" doc="The minimum allowed field value Hue" />
-    <arg name="s_limit_max" value="181" doc="The maximum allowed field value Saturation" />
-    <arg name="s_limit_min" value="0" doc="The minimum allowed field value Saturation" />
-    <arg name="v_limit_max" value="239" doc="The maximum allowed field value Value" />
-    <arg name="v_limit_min" value="255" doc="The minimum allowed field value Value" />
+    <!-- params for orange -->
+    <arg name="h_limit_max" value="33" doc="The maximum allowed field value Hue" />
+    <arg name="h_limit_min" value="0" doc="The minimum allowed field value Hue" />
+    <arg name="s_limit_max" value="256" doc="The maximum allowed field value Saturation" />
+    <arg name="s_limit_min" value="189" doc="The minimum allowed field value Saturation" />
+    <arg name="v_limit_max" value="196" doc="The maximum allowed field value Value" />
+    <arg name="v_limit_min" value="256" doc="The minimum allowed field value Value" />
     <arg name="debug_view" value="false" />
   </include>
 
@@ -26,10 +26,10 @@
     <arg name="image" value="/camera/rgb/image_raw" />
     <!-- params for green -->
     <arg name="h_limit_max" value="158" doc="The maximum allowed field value Hue" />
-    <arg name="h_limit_min" value="113" doc="The minimum allowed field value Hue" />
-    <arg name="s_limit_max" value="243" doc="The maximum allowed field value Saturation" />
-    <arg name="s_limit_min" value="162" doc="The minimum allowed field value Saturation" />
-    <arg name="v_limit_max" value="241" doc="The maximum allowed field value Value" />
+    <arg name="h_limit_min" value="71" doc="The minimum allowed field value Hue" />
+    <arg name="s_limit_max" value="256" doc="The maximum allowed field value Saturation" />
+    <arg name="s_limit_min" value="128" doc="The minimum allowed field value Saturation" />
+    <arg name="v_limit_max" value="227" doc="The maximum allowed field value Value" />
     <arg name="v_limit_min" value="6" doc="The minimum allowed field value Value" />
     <arg name="debug_view" value="false" />
   </include>
@@ -41,10 +41,24 @@
     <!-- params for blue  -->
     <arg name="h_limit_max" value="245" doc="The maximum allowed field value Hue" />
     <arg name="h_limit_min" value="195" doc="The minimum allowed field value Hue" />
-    <arg name="s_limit_max" value="200" doc="The maximum allowed field value Saturation" />
-    <arg name="s_limit_min" value="256" doc="The minimum allowed field value Saturation" />
-    <arg name="v_limit_max" value="252" doc="The maximum allowed field value Value" />
-    <arg name="v_limit_min" value="103" doc="The minimum allowed field value Value" />
+    <arg name="s_limit_max" value="256" doc="The maximum allowed field value Saturation" />
+    <arg name="s_limit_min" value="136" doc="The minimum allowed field value Saturation" />
+    <arg name="v_limit_max" value="254" doc="The maximum allowed field value Value" />
+    <arg name="v_limit_min" value="66" doc="The minimum allowed field value Value" />
+    <arg name="debug_view" value="false" />
+  </include>
+
+  <!-- yellow color filter -->
+  <include file="$(find opencv_apps)/launch/hsv_color_filter.launch" >
+    <arg name="node_name" value="yellow_color_filter" />
+    <arg name="image" value="/camera/rgb/image_raw" />
+    <!-- params for yellow  -->
+    <arg name="h_limit_max" value="150" doc="The maximum allowed field value Hue" />
+    <arg name="h_limit_min" value="59" doc="The minimum allowed field value Hue" />
+    <arg name="s_limit_max" value="111" doc="The maximum allowed field value Saturation" />
+    <arg name="s_limit_min" value="9" doc="The minimum allowed field value Saturation" />
+    <arg name="v_limit_max" value="233" doc="The maximum allowed field value Value" />
+    <arg name="v_limit_min" value="256" doc="The minimum allowed field value Value" />
     <arg name="debug_view" value="false" />
   </include>
 
