@@ -10,6 +10,9 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   sensor_msgs
   jsk_recognition_msgs
+  cv_bridge
+  image_transport
+  tf
 )
 
 catkin_package(
@@ -25,3 +28,6 @@ include_directories(
 add_executable(rect_publisher src/rect_publisher.cpp)
 target_link_libraries(rect_publisher ${catkin_LIBRARIES})
 # add_dependencies(mask_image beginner_tutorials_generate_messages_cpp)
+
+add_executable(convert_to_map_coords src/convert_to_map_coords.cpp)
+target_link_libraries(convert_to_map_coords ${catkin_LIBRARIES})

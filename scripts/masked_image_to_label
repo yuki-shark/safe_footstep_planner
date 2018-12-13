@@ -54,9 +54,11 @@ class image_converter:
 
     # convert type to "32SC1"
     label_image = label_image.astype(np.int32)
+    label_image = label_image.astype(np.uint8)
 
     try:
-      self.image_pub.publish(self.bridge.cv2_to_imgmsg(label_image, "32SC1"))
+      # self.image_pub.publish(self.bridge.cv2_to_imgmsg(label_image, "32SC1"))
+      self.image_pub.publish(self.bridge.cv2_to_imgmsg(label_image, "mono8"))
     except CvBridgeError as e:
       print(e)
 

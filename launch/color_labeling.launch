@@ -1,16 +1,20 @@
 <launch>
   <arg name="gui" default="true" />
+  <!-- <arg name="INPUT_IMAGE" default="/camera/rgb/image_raw" /> -->
+  <arg name="INPUT_IMAGE" default="/depth_image_creator/output_image" />
+  <!-- <arg name="BAG_FILE"    default="$(find safe_footstep_planner)/bagfiles/sample_four_colors.bag" /> -->
+  <arg name="BAG_FILE"    default="$(find safe_footstep_planner)/bagfiles/sample_convert_to_map.bag" />
 
   <!-- sample rosbag play -->
   <node name="sample_rosbag_play" pkg="rosbag" type="play"
-        args="$(find safe_footstep_planner)/bagfiles/sample_four_colors.bag -l"
+        args="$(arg BAG_FILE) -l --clock"
         output="screen">
   </node>
 
   <!-- red color filter -->
   <include file="$(find opencv_apps)/launch/hsv_color_filter.launch" >
     <arg name="node_name" value="red_color_filter" />
-    <arg name="image" value="/camera/rgb/image_raw" />
+    <arg name="image" value="$(arg INPUT_IMAGE)" />
     <!-- params for orange -->
     <arg name="h_limit_max" value="33" doc="The maximum allowed field value Hue" />
     <arg name="h_limit_min" value="0" doc="The minimum allowed field value Hue" />
@@ -24,7 +28,7 @@
   <!-- green color filter -->
   <include file="$(find opencv_apps)/launch/hsv_color_filter.launch" >
     <arg name="node_name" value="green_color_filter" />
-    <arg name="image" value="/camera/rgb/image_raw" />
+    <arg name="image" value="$(arg INPUT_IMAGE)" />
     <!-- params for green -->
     <arg name="h_limit_max" value="158" doc="The maximum allowed field value Hue" />
     <arg name="h_limit_min" value="71" doc="The minimum allowed field value Hue" />
@@ -38,7 +42,7 @@
   <!-- blue color filter -->
   <include file="$(find opencv_apps)/launch/hsv_color_filter.launch" >
     <arg name="node_name" value="blue_color_filter" />
-    <arg name="image" value="/camera/rgb/image_raw" />
+    <arg name="image" value="$(arg INPUT_IMAGE)" />
     <!-- params for blue  -->
     <arg name="h_limit_max" value="245" doc="The maximum allowed field value Hue" />
     <arg name="h_limit_min" value="195" doc="The minimum allowed field value Hue" />
@@ -52,7 +56,7 @@
   <!-- yellow color filter -->
   <include file="$(find opencv_apps)/launch/hsv_color_filter.launch" >
     <arg name="node_name" value="yellow_color_filter" />
-    <arg name="image" value="/camera/rgb/image_raw" />
+    <arg name="image" value="$(arg INPUT_IMAGE)" />
     <!-- params for yellow  -->
     <arg name="h_limit_max" value="150" doc="The maximum allowed field value Hue" />
     <arg name="h_limit_min" value="59" doc="The minimum allowed field value Hue" />
@@ -66,6 +70,7 @@
   <!-- masked images to label -->
   <node name="maske_images_to_label" pkg="safe_footstep_planner" type="masked_image_to_label"/>
 
+  <!-- gui -->
   <node name="label_image_viewer" pkg="image_view" type="image_view" if="$(arg gui)">
     <remap from="image" to="/label_image" />
   </node>
