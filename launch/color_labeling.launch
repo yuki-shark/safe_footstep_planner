@@ -1,14 +1,20 @@
 <launch>
-  <arg name="gui" default="true" />
+  <arg name="gui"         default="false" />
   <!-- <arg name="INPUT_IMAGE" default="/camera/rgb/image_raw" /> -->
   <arg name="INPUT_IMAGE" default="/depth_image_creator/output_image" />
   <!-- <arg name="BAG_FILE"    default="$(find safe_footstep_planner)/bagfiles/sample_four_colors.bag" /> -->
-  <arg name="BAG_FILE"    default="$(find safe_footstep_planner)/bagfiles/sample_convert_to_map.bag" />
+  <arg name="use_bagfile" default="false" />
+  <arg name="BAGFILE"     default="$(find safe_footstep_planner)/bagfiles/sample_convert_to_map.bag" />
+
+  <arg name="RED_WEIGHT"    default="0" />
+  <arg name="GREEN_WEIGHT"  default="0" />
+  <arg name="BLUE_WEIGHT"   default="0" />
+  <arg name="YELLOW_WEIGHT" default="0" />
 
   <!-- sample rosbag play -->
   <node name="sample_rosbag_play" pkg="rosbag" type="play"
-        args="$(arg BAG_FILE) -l --clock"
-        output="screen">
+        args="$(arg BAGFILE) -l --clock"
+        output="screen" if="$(arg use_bagfile)">
   </node>
 
   <!-- red color filter -->
@@ -58,17 +64,29 @@
     <arg name="node_name" value="yellow_color_filter" />
     <arg name="image" value="$(arg INPUT_IMAGE)" />
     <!-- params for yellow  -->
-    <arg name="h_limit_max" value="150" doc="The maximum allowed field value Hue" />
-    <arg name="h_limit_min" value="59" doc="The minimum allowed field value Hue" />
-    <arg name="s_limit_max" value="111" doc="The maximum allowed field value Saturation" />
-    <arg name="s_limit_min" value="9" doc="The minimum allowed field value Saturation" />
-    <arg name="v_limit_max" value="233" doc="The maximum allowed field value Value" />
-    <arg name="v_limit_min" value="256" doc="The minimum allowed field value Value" />
+    <!-- <arg name="h_limit_max" value="150" doc="The maximum allowed field value Hue" /> -->
+    <!-- <arg name="h_limit_min" value="59" doc="The minimum allowed field value Hue" /> -->
+    <!-- <arg name="s_limit_max" value="111" doc="The maximum allowed field value Saturation" /> -->
+    <!-- <arg name="s_limit_min" value="9" doc="The minimum allowed field value Saturation" /> -->
+    <!-- <arg name="v_limit_max" value="233" doc="The maximum allowed field value Value" /> -->
+    <!-- <arg name="v_limit_min" value="256" doc="The minimum allowed field value Value" /> -->
+    <!-- for choreonoid -->
+    <arg name="h_limit_max" value="64" doc="The maximum allowed field value Hue" />
+    <arg name="h_limit_min" value="47" doc="The minimum allowed field value Hue" />
+    <arg name="s_limit_max" value="256" doc="The maximum allowed field value Saturation" />
+    <arg name="s_limit_min" value="235" doc="The minimum allowed field value Saturation" />
+    <arg name="v_limit_max" value="204" doc="The maximum allowed field value Value" />
+    <arg name="v_limit_min" value="185" doc="The minimum allowed field value Value" />
     <arg name="debug_view" value="false" />
   </include>
 
   <!-- masked images to label -->
-  <node name="maske_images_to_label" pkg="safe_footstep_planner" type="masked_image_to_label"/>
+  <node name="masked_images_to_label" pkg="safe_footstep_planner" type="masked_image_to_label">
+    <param name="red_weight"    value="$(arg RED_WEIGHT)" />
+    <param name="green_weight"  value="$(arg GREEN_WEIGHT)" />
+    <param name="blue_weight"   value="$(arg BLUE_WEIGHT)" />
+    <param name="yellow_weight" value="$(arg YELLOW_WEIGHT)" />
+  </node>
 
   <!-- gui -->
   <node name="label_image_viewer" pkg="image_view" type="image_view" if="$(arg gui)">

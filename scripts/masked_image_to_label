@@ -19,27 +19,24 @@ class image_converter:
 
     self.bridge = CvBridge()
 
-    self.data_red_sub = message_filters.Subscriber("/red_color_filter/image", Image)
-    self.data_green_sub = message_filters.Subscriber("/green_color_filter/image", Image)
-    self.data_blue_sub = message_filters.Subscriber("/blue_color_filter/image", Image)
+    self.data_red_sub    = message_filters.Subscriber("/red_color_filter/image", Image)
+    self.data_green_sub  = message_filters.Subscriber("/green_color_filter/image", Image)
+    self.data_blue_sub   = message_filters.Subscriber("/blue_color_filter/image", Image)
     self.data_yellow_sub = message_filters.Subscriber("/yellow_color_filter/image", Image)
+
     self.ts = message_filters.ApproximateTimeSynchronizer([self.data_red_sub, self.data_green_sub, self.data_blue_sub, self.data_yellow_sub], 10, 0.01)
+
     self.ts.registerCallback(self.callback)
+    self.red_weight    = rospy.get_param('~red_weight', 0)
+    self.green_weight  = rospy.get_param('~green_weight', 0)
+    self.blue_weight   = rospy.get_param('~blue_weight', 0)
+    self.yellow_weight = rospy.get_param('~yellow_weight', 0)
 
   def callback(self, data_red, data_green, data_blue, data_yellow):
     try:
       cv_image_red = self.bridge.imgmsg_to_cv2(data_red, "mono8")
-    except CvBridgeError as e:
-      print(e)
-    try:
       cv_image_green = self.bridge.imgmsg_to_cv2(data_green, "mono8")
-    except CvBridgeError as e:
-      print(e)
-    try:
       cv_image_blue = self.bridge.imgmsg_to_cv2(data_blue, "mono8")
-    except CvBridgeError as e:
-      print(e)
-    try:
       cv_image_yellow = self.bridge.imgmsg_to_cv2(data_yellow, "mono8")
     except CvBridgeError as e:
       print(e)
@@ -47,13 +44,14 @@ class image_converter:
     label_image = np.zeros(cv_image_red.shape)
 
     # set labels as num
-    label_image += cv_image_red    * 1.0/255 * 1  # Label 1
-    label_image += cv_image_green  * 1.0/255 * 2  # Label 2
-    label_image += cv_image_blue   * 1.0/255 * 3  # Label 3
-    label_image += cv_image_yellow * 1.0/255 * 4  # Label 4
+    label_image += cv_image_red    * 1.0/255 * self.red_weight     # Label red
+    label_image += cv_image_green  * 1.0/255 * self.green_weight   # Label green
+    label_image += cv_image_blue   * 1.0/255 * self.blue_weight    # Label blue
+    label_image += cv_image_yellow * 1.0/255 * self.yellow_weight  # Label yellow
 
     # convert type to "32SC1"
-    label_image = label_image.astype(np.int32)
+    # label_image = label_image.astype(np.int32)
+    # convert type to "MONO8"
     label_image = label_image.astype(np.uint8)
 
     try:
@@ -63,8 +61,8 @@ class image_converter:
       print(e)
 
 def main(args):
-  ic = image_converter()
   rospy.init_node('image_converter', anonymous=True)
+  ic = image_converter()
   try:
     rospy.spin()
   except KeyboardInterrupt:
