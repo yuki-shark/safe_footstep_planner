@@ -2,11 +2,12 @@
 
   <arg name="camera1" default="camera1" />
   <arg name="camera2" default="camera2" />
-  <arg name="camera1_serial_id" default="16042710004" />  <!-- ASTRA -->
-  <arg name="camera2_serial_id" default="16091910045" />  <!-- ASTRA S -->
+  <arg name="camera1_serial_id" default="16091910045" />  <!-- ASTRA -->
+  <arg name="camera2_serial_id" default="16042710004" />  <!-- ASTRA S -->
   <arg name="openni2" default="false" />
   <arg name="rviz" default="false" />
   <arg name="use_default_camera_frames" default="false" />
+  <arg name="height_offset" default="0" />
 
   <!-- use openni2 launch -->
   <group if="$(arg openni2)">
@@ -52,8 +53,18 @@
     </include>
   </group>
 
-  <node pkg="tf" type="static_transform_publisher" name="$(arg camera1)_tf_broadcaster" args="0.0 0.0 -0.085 0.0 1.5707963267948966 0.0 camera_origin $(arg camera1)_link 100" />
-  <node pkg="tf" type="static_transform_publisher" name="$(arg camera2)_tf_broadcaster" args="0.05273 0.0 -0.0 0.0 0.8726646259971648 0.0 camera_origin $(arg camera2)_link 100" />
+  <!-- <node pkg="tf" type="static_transform_publisher" name="$(arg camera1)_tf_broadcaster" args="0.0 0.0 -0.085 0.0 1.5707963267948966 0.0 camera_origin $(arg camera1)_link 100" /> -->
+  <!-- <node pkg="tf" type="static_transform_publisher" name="$(arg camera2)_tf_broadcaster" args="0.05273 0.0 -0.0 0.0 0.8726646259971648 0.0 camera_origin $(arg camera2)_link 100" /> -->
+
+  <!-- real robot default -->
+  <!-- <node pkg="tf" type="static_transform_publisher" name="$(arg camera1)_tf_broadcaster" args="0.26123 0.0 0.180 0.0 0.872664626 0.0 BODY $(arg camera1)_link 100" /> -->
+  <!-- <node pkg="tf" type="static_transform_publisher" name="$(arg camera2)_tf_broadcaster" args="0.2085 0.0 0.103 0.0 1.5707963268 0.0 BODY $(arg camera2)_link 100" /> -->
+
+  <!-- adjust height -->
+  <!-- <node pkg="tf" type="static_transform_publisher" name="$(arg camera1)_tf_broadcaster" args="0.26123 0.0 $(eval 0.180 + 0.0) 0.0 0.872664626 0.0 BODY $(arg camera1)_link 100" /> -->
+  <!-- <node pkg="tf" type="static_transform_publisher" name="$(arg camera2)_tf_broadcaster" args="0.20850 0.0 $(eval 0.103 + arg('height_offset')) 0.0 1.570796327 0.0 BODY $(arg camera2)_link 100" /> -->
+  <node pkg="tf" type="static_transform_publisher" name="$(arg camera1)_tf_broadcaster" args="0.26123 0.0 0.100 0.0 0.872664626 0.0 BODY $(arg camera1)_link 100" />
+  <node pkg="tf" type="static_transform_publisher" name="$(arg camera2)_tf_broadcaster" args="0.20850 0.0 0.023 0.0 1.5707963268 0.0 BODY $(arg camera2)_link 100" />
 
   <node type="rviz" name="rviz" pkg="rviz" args="-d $(find safe_footstep_planner)/config/dual_astra.rviz" if="$(arg rviz)"/>
 
