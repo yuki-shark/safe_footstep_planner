@@ -27,10 +27,10 @@ class image_converter:
     self.ts = message_filters.ApproximateTimeSynchronizer([self.data_red_sub, self.data_green_sub, self.data_blue_sub, self.data_yellow_sub], 10, 0.01)
 
     self.ts.registerCallback(self.callback)
-    self.red_weight    = rospy.get_param('~red_weight', 0)
-    self.green_weight  = rospy.get_param('~green_weight', 0)
-    self.blue_weight   = rospy.get_param('~blue_weight', 0)
-    self.yellow_weight = rospy.get_param('~yellow_weight', 0)
+    self.red_label    = rospy.get_param('~red_label', 0)
+    self.green_label  = rospy.get_param('~green_label', 0)
+    self.blue_label   = rospy.get_param('~blue_label', 0)
+    self.yellow_label = rospy.get_param('~yellow_label', 0)
 
   def callback(self, data_red, data_green, data_blue, data_yellow):
     try:
@@ -44,10 +44,10 @@ class image_converter:
     label_image = np.zeros(cv_image_red.shape)
 
     # set labels as num
-    label_image += cv_image_red    * 1.0/255 * self.red_weight     # Label red
-    label_image += cv_image_green  * 1.0/255 * self.green_weight   # Label green
-    label_image += cv_image_blue   * 1.0/255 * self.blue_weight    # Label blue
-    label_image += cv_image_yellow * 1.0/255 * self.yellow_weight  # Label yellow
+    label_image += cv_image_red    * 1.0/255 * self.red_label     # Label red
+    label_image += cv_image_green  * 1.0/255 * self.green_label   # Label green
+    label_image += cv_image_blue   * 1.0/255 * self.blue_label    # Label blue
+    label_image += cv_image_yellow * 1.0/255 * self.yellow_label  # Label yellow
 
     # convert type to "32SC1"
     # label_image = label_image.astype(np.int32)

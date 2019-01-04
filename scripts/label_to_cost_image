@@ -1,0 +1,67 @@
+#!/usr/bin/env python
+# from __future__ import print_function
+
+# import roslib
+# roslib.load_manifest('safe_footstep_planner')
+import sys
+import os
+import rospy
+import rospkg
+import json
+import cv2
+import numpy as np
+import message_filters
+from std_msgs.msg import String
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError
+
+class label_converter:
+
+  def __init__(self):
+    self.image_pub = rospy.Publisher("/cost_image",Image)
+    self.bridge = CvBridge()
+    self.image_sub = rospy.Subscriber("/label_image", Image, self.callback)
+
+  def getDatabase(self):
+    rospack = rospkg.RosPack()
+    path = os.path.join(rospack.get_path('safe_footstep_planner'), 'config/database.json')
+    fn = open(path, 'r')
+    database = json.load(fn)
+    # database = dict([(0,0), (1, 1), (2, 2), (3, 20), (4,10)])
+    return database
+
+  def callback(self, data):
+    try:
+      label_image = self.bridge.imgmsg_to_cv2(data, "mono8")
+    except CvBridgeError as e:
+      print(e)
+
+    label_image = np.array(label_image)
+    shape = label_image.shape
+    label_image = label_image.flatten()
+    database = self.getDatabase()
+
+    cost_image = np.array(list(map(lambda x: database.get(str(x), 0), label_image))).reshape(shape)
+
+    # convert type to "32SC1"
+    # label_image = label_image.astype(np.int32)
+    # convert type to "MONO8"
+    cost_image = cost_image.astype(np.uint8)
+
+    try:
+      # self.image_pub.publish(self.bridge.cv2_to_imgmsg(label_image, "32SC1"))
+      self.image_pub.publish(self.bridge.cv2_to_imgmsg(cost_image, "mono8"))
+    except CvBridgeError as e:
+      print(e)
+
+def main(args):
+  rospy.init_node('label_converter', anonymous=True)
+  lc = label_converter()
+  try:
+    rospy.spin()
+  except KeyboardInterrupt:
+    print("Shutting down")
+  cv2.destroyAllWindows()
+
+if __name__ == '__main__':
+    main(sys.argv)
