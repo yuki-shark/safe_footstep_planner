@@ -12,6 +12,8 @@ import cv2
 import numpy as np
 import message_filters
 from std_msgs.msg import String
+from std_msgs.msg import MultiArrayDimension
+from std_msgs.msg import Int8MultiArray
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 
@@ -19,6 +21,7 @@ class label_converter:
 
   def __init__(self):
     self.image_pub = rospy.Publisher("/cost_image",Image)
+    self.labels_pub = rospy.Publisher("/known_labels", Int8MultiArray)
     self.bridge = CvBridge()
     self.image_sub = rospy.Subscriber("/label_image", Image, self.callback)
 
@@ -29,6 +32,17 @@ class label_converter:
     database = json.load(fn)
     # database = dict([(0,0), (1, 1), (2, 2), (3, 20), (4,10)])
     return database
+
+  def pubLabelMsg(self, known_labels):
+    msg = Int8MultiArray()
+    dim = MultiArrayDimension()
+    dim.label  = "length"
+    dim.size   = len(known_labels)
+    dim.stride = len(known_labels)
+    msg.layout.dim.append(dim)
+    msg.layout.data_offset = 0
+    msg.data = known_labels
+    self.labels_pub.publish(msg)
 
   def callback(self, data):
     try:
@@ -53,6 +67,9 @@ class label_converter:
       self.image_pub.publish(self.bridge.cv2_to_imgmsg(cost_image, "mono8"))
     except CvBridgeError as e:
       print(e)
+
+    known_labels = list(map(lambda x: np.uint8(x), database.keys()))
+    self.pubLabelMsg(known_labels)
 
 def main(args):
   rospy.init_node('label_converter', anonymous=True)
