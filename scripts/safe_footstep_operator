@@ -1,0 +1,100 @@
+#!/usr/bin/env python
+# from __future__ import print_function
+
+import sys
+import os
+import rospy
+import rospkg
+import json
+import numpy as np
+from safe_footstep_planner.srv import *
+from geometry_msgs.msg import Point
+
+import random # for test to set label randomly
+
+class safe_footstep_operator:
+
+  def __init__(self):
+    # self.image_pub = rospy.Publisher("/cost_image",Image)
+    # self.labels_pub = rospy.Publisher("/known_labels", Int8MultiArray)
+    # self.image_sub = rospy.Subscriber("/label_image", Image, self.callback)
+    print ('safe footstep operator initialized')
+
+  def getDatabase(self):
+    rospack = rospkg.RosPack()
+    path = os.path.join(rospack.get_path('safe_footstep_planner'), 'config/database.json')
+    fr = open(path, 'r')
+    database = json.load(fr)
+    # database = dict([(0,0), (1, 1), (2, 2), (3, 20), (4,10)])
+    return database
+
+  def saveDatabase(self, database):
+    rospack = rospkg.RosPack()
+    path = os.path.join(rospack.get_path('safe_footstep_planner'), 'config/database.json')
+    fw = open(path, 'w')
+    json.dump(database, fw)
+
+  def checkFootholdClient(self, target_point):
+    rospy.wait_for_service('check_foothold')
+    try:
+      check_foothold = rospy.ServiceProxy('check_foothold', CheckFoothold)
+      res = check_foothold(target_point)
+      return res.force_z
+    except rospy.ServiceException, e:
+      print "[check foothold] Service call failed: %s"%e
+
+  def targetFootholdClient(self):
+    # rospy.wait_for_service('target_foothold')
+    try:
+      # target_foothold = rospy.ServiceProxy('target_foothold', TargetFoothold)
+      # target = target_foothold()
+      # label = str(target.label)
+
+      # for test without TargetFoothold
+      msg = Point()
+      msg.x = 0.25
+      msg.y = 0.00
+      msg.z = 0.07
+      label = str(random.randrange(4, 256))
+
+      # wait for operator input
+      print('Press "y" to start foothold check.')
+      start = raw_input('>>> ')
+      if (start == 'y'):
+        print('Foothold Checking...')
+        # force_z = self.checkFootholdClient(target.point)
+        force_z = self.checkFootholdClient(msg)
+      else:
+        print('Foothold check Canceled.')
+
+      # set cost
+      force_offset = 50 # should be modified
+      force_threshold = 100 # should be modified
+      if (abs(force_z - force_offset) > force_threshold):
+        cost = 2
+      else:
+        cost = 9
+
+      # add data to database
+      database = self.getDatabase()
+      data = {label: cost}
+      print("label: %s  cost: %d" %(label, cost))
+      database.update(data)
+      self.saveDatabase(database)
+      print('Database Updated')
+
+    except rospy.ServiceException, e:
+      print "[target foothold] Service call failed: %s"%e
+
+
+def main(args):
+  rospy.init_node('safe_footstep_operator', anonymous=True)
+  operator = safe_footstep_operator()
+  try:
+    operator.targetFootholdClient()
+    rospy.spin()
+  except KeyboardInterrupt:
+    print("Shutting down")
+
+if __name__ == '__main__':
+    main(sys.argv)

@@ -1,0 +1,6 @@
+<launch>
+  <!-- check foothold controller -->
+  <node name="check_foothold_controller" pkg="safe_footstep_planner" type="check_foothold_controller.l" output="screen"/>
+  <!-- safe footstep operator -->
+  <node name="safe_footstep_operator" pkg="safe_footstep_planner" type="safe_footstep_operator" output="screen" />
+</launch>
