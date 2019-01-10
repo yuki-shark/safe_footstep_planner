@@ -9,11 +9,20 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   sensor_msgs
+  geometry_msgs
   jsk_recognition_msgs
   cv_bridge
   image_transport
+  message_generation
   tf
 )
+
+add_service_files(
+  FILES
+  CheckFoothold.srv
+)
+
+generate_messages(DEPENDENCIES geometry_msgs)
 
 catkin_package(
 
