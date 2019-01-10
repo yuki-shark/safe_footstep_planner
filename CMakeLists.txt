@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   image_transport
   message_generation
   tf
+  roseus
 )
 
 add_service_files(
