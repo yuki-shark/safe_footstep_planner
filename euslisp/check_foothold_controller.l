@@ -3,7 +3,7 @@
 (load "package://hrpsys_ros_bridge_tutorials/euslisp/chidori-interface.l")
 
 (chidori-init)
-(print "chidori initialized")
+(format t "chidori initialized~%")
 (setq *robot* *chidori*)
 
 (defun check-foothold(req)
@@ -11,20 +11,20 @@
   (when (and (>= (send req :target :x)  0.00) (<= (send req :target :x) 0.30)
              (>= (send req :target :y) -0.10) (<= (send req :target :y) 0.10)
              (>= (send req :target :z)  0.00) (<= (send req :target :z) 0.08))
-    (print "starting check foothold")
-    (format t "x: ~A   y: ~A   z: ~A~%"
+    (format t "Start Check Foothold~%")
+    (format t "x: ~A  y: ~A  z: ~A~%"
             (send req :target :x)
             (send req :target :y)
             (send req :target :z))
     (let ((m (send req :response)))
       (progn
-        (print "move ZMP to lleg")
+        (format t "Moving ZMP to lleg...~%")
         (send *ri* :stop-st)
         (send *ri* :stop-auto-balancer)
         (send *ri* :set-auto-balancer-param :leg-names '(:lleg) :transition-time 10.0)
         (send *ri* :start-auto-balancer)
         ;; (send *ri* :start-st)
-        (print "step on")
+        (format t "Step On~%")
         (progn
           (send *robot* :reset-pose)
           (send *robot* :rleg :move-end-pos (float-vector 0 0 95))
@@ -37,7 +37,7 @@
           (send *ri* :angle-vector (send *robot* :angle-vector) 1000)
           (send *ri* :wait-interpolation)
           )
-        (print "watching force")
+        (format t "Watching Force~%")
         (progn
           (send *robot* :reset-pose)
           (send *robot* :rleg :move-end-pos (scale 1000 (float-vector (send req :target :x) (send req :target :y) (- (send req :target :z) 0.005))))
@@ -54,7 +54,7 @@
           )
         ;; (read-line)
         (unix:sleep 3)
-        (print "step off")
+        (format t "Step Off~%")
         (progn
           (send *robot* :reset-pose)
           (send *robot* :rleg :move-end-pos (scale 1000 (float-vector (send req :target :x) (send req :target :y) 0.095)))
@@ -76,7 +76,7 @@
           )
         ;; (read-line)
         (unix:sleep 3)
-        (print "move ZMP to center of legs")
+        (format t "Return ZMP to center of legs~%")
         (progn
           (send *ri* :stop-auto-balancer)
           (send *ri* :set-auto-balancer-param :leg-names '(:rleg :lleg) :transition-time 2.0)
@@ -85,14 +85,14 @@
           )
         ) ;; check foothold motion
       ;; (setq min_z (* 1000 (send req :target :x)))
-      (print "check foothold finished")
+      (format t "Check Foothold Finished~%")
       (send m :force_z min_z)
       m) ;; let
     ) ;; when
   ) ;; defun
 
-(ros::roseus "check_foothold_server")
-(print "init check_foothold_server")
+(ros::roseus "check_foothold_controller")
+(format t "Ready to check foothold~%")
 (ros::load-ros-manifest "safe_footstep_planner")
 (ros::advertise-service "check_foothold" safe_footstep_planner::CheckFoothold #'check-foothold)
 (do-until-key
