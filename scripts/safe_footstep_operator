@@ -36,11 +36,11 @@ class safe_footstep_operator:
     fw = open(path, 'w')
     json.dump(database, fw)
 
-  def checkFootholdClient(self, target_point):
+  def checkFootholdClient(self, target_point, leg):
     rospy.wait_for_service('check_foothold')
     try:
       check_foothold = rospy.ServiceProxy('check_foothold', CheckFoothold)
-      res = check_foothold(target_point)
+      res = check_foothold(target_point, leg)
       return res.force_z
     except rospy.ServiceException, e:
       print "[check foothold] Service call failed: %s"%e
@@ -110,7 +110,7 @@ class safe_footstep_operator:
     start = raw_input('>>> ')
     if (start == 'y'):
       print('Foothold Checking...')
-      force_z = self.checkFootholdClient(self.target_foothold.target)
+      force_z = self.checkFootholdClient(self.target_foothold.target, self.target_foothold.leg)
       # force_z = self.checkFootholdClient(msg)
     else:
       print('Foothold check Canceled.')

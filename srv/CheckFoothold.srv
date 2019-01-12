@@ -1,3 +1,4 @@
 geometry_msgs/Point target
+int8 leg
 ---
 float64 force_z
