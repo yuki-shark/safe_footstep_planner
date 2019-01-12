@@ -18,9 +18,15 @@ find_package(catkin REQUIRED COMPONENTS
   roseus
 )
 
+add_message_files(
+  FILES
+  TargetFoothold.msg
+)
+
 add_service_files(
   FILES
   CheckFoothold.srv
+  GetTargetFoothold.srv
 )
 
 generate_messages(DEPENDENCIES geometry_msgs)

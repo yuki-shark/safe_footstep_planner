@@ -6,8 +6,11 @@ import os
 import rospy
 import rospkg
 import json
+import time
 import numpy as np
 from safe_footstep_planner.srv import *
+from safe_footstep_planner.msg import TargetFoothold
+from std_srvs.srv import Empty
 from geometry_msgs.msg import Point
 
 import random # for test to set label randomly
@@ -15,9 +18,8 @@ import random # for test to set label randomly
 class safe_footstep_operator:
 
   def __init__(self):
-    # self.image_pub = rospy.Publisher("/cost_image",Image)
-    # self.labels_pub = rospy.Publisher("/known_labels", Int8MultiArray)
-    # self.image_sub = rospy.Subscriber("/label_image", Image, self.callback)
+    self.sub_target_foothold = rospy.Subscriber("/footstep_planner/target_foothold", TargetFoothold, self.targetFootholdCallback)
+    self.target_foothold = None
     print ('safe footstep operator initialized')
 
   def getDatabase(self):
@@ -43,55 +45,98 @@ class safe_footstep_operator:
     except rospy.ServiceException, e:
       print "[check foothold] Service call failed: %s"%e
 
-  def targetFootholdClient(self):
-    # rospy.wait_for_service('target_foothold')
-    try:
-      # target_foothold = rospy.ServiceProxy('target_foothold', TargetFoothold)
-      # target = target_foothold()
-      # label = str(target.label)
+  # def targetFootholdServer(self, req):
+  #   try:
+  #     self.req = req
+  #   except rospy.ServiceException, e:
+  #     print "[target foothold] Service call failed: %s"%e
+  #   return Empty()
 
-      # for test without TargetFoothold
-      msg = Point()
-      msg.x = 0.25
-      msg.y = 0.00
-      msg.z = 0.07
-      label = str(random.randrange(4, 256))
+  def targetFootholdCallback(self, data):
+    self.target_foothold = data
 
-      # wait for operator input
-      print('Press "y" to start foothold check.')
-      start = raw_input('>>> ')
-      if (start == 'y'):
-        print('Foothold Checking...')
-        # force_z = self.checkFootholdClient(target.point)
-        force_z = self.checkFootholdClient(msg)
-      else:
-        print('Foothold check Canceled.')
+  def startOperation(self):
+    print('Press "y" to start foothold check.')
+    start = raw_input('>>> ')
+    if (start == 'y'):
+      while (True):
+        if (self.target_foothold):
+          print('Press "s" to show target foothold.')
+          print('Press "e" to execute check foothold.')
+          print('Press "f" to finish operation.')
+          key = raw_input('>>> ')
+          if (key == 's'):
+            print('Leg : %d' %self.target_foothold.leg)
+            print('Target Foothold : (%s %s %s)' %(self.target_foothold.target.x, self.target_foothold.target.y, self.target_foothold.target.z))
+          elif (key == 'e'):
+            self.executeCheckFoothold()
+          elif (key == 'f'):
+            break
+        else:
+          print('Operation node has not received target foothold topic')
+          time.sleep(1)
+    else:
+      print('Operation finished.')
 
-      # set cost
-      force_offset = 50 # should be modified
-      force_threshold = 100 # should be modified
-      if (abs(force_z - force_offset) > force_threshold):
-        cost = 2
-      else:
-        cost = 9
+  def executeCheckFoothold(self):
+    label = str(self.target_foothold.label)
+    leg = self.target_foothold.leg
 
-      # add data to database
-      database = self.getDatabase()
-      data = {label: cost}
-      print("label: %s  cost: %d" %(label, cost))
-      database.update(data)
-      self.saveDatabase(database)
-      print('Database Updated')
+    # for test without TargetFoothold
+    # msg = Point()
+    # msg.x = 0.25
+    # msg.y = 0.00
+    # msg.z = 0.07
+    # label = str(random.randrange(4, 256))
 
-    except rospy.ServiceException, e:
-      print "[target foothold] Service call failed: %s"%e
+    # modify target
+    if (self.target_foothold.target.x < 0.0):
+      self.target_foothold.target.x = 0.0
+    if (self.target_foothold.target.x > 0.3):
+      self.target_foothold.target.x = 0.3
+    if (self.target_foothold.target.y < -0.1):
+      self.target_foothold.target.y = -0.1
+    if (self.target_foothold.target.y > 0.1):
+      self.target_foothold.target.y = 0.1
+    if (self.target_foothold.target.z < 0.0):
+      self.target_foothold.target.z = 0.0
+    if (self.target_foothold.target.z > 0.08):
+      self.target_foothold.target.z = 0.08
 
+    # wait for operator input
+    print('Leg : %d' %self.target_foothold.leg)
+    print('Target Foothold : (%s %s %s)' %(self.target_foothold.target.x, self.target_foothold.target.y, self.target_foothold.target.z))
+    print('Press "y" to start foothold check.')
+    start = raw_input('>>> ')
+    if (start == 'y'):
+      print('Foothold Checking...')
+      force_z = self.checkFootholdClient(self.target_foothold.target)
+      # force_z = self.checkFootholdClient(msg)
+    else:
+      print('Foothold check Canceled.')
+
+    # set cost
+    force_offset = 50 # should be modified
+    force_threshold = 100 # should be modified
+    if (abs(force_z - force_offset) > force_threshold):
+      cost = 2
+    else:
+      cost = 9
+
+    # add data to database
+    database = self.getDatabase()
+    data = {label: cost}
+    print("label: %s  cost: %d" %(label, cost))
+    database.update(data)
+    self.saveDatabase(database)
+    print('Database Updated')
 
 def main(args):
   rospy.init_node('safe_footstep_operator', anonymous=True)
   operator = safe_footstep_operator()
   try:
-    operator.targetFootholdClient()
+    # s = rospy.Service('target_foothold', GetTargetFoothold, operator.targetFootholdServer)
+    operator.startOperation()
     rospy.spin()
   except KeyboardInterrupt:
     print("Shutting down")
