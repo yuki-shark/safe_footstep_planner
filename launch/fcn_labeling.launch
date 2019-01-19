@@ -1,0 +1,26 @@
+<launch>
+  <arg name="gui"         default="false" />
+  <arg name="INPUT_IMAGE" default="/depth_image_creator/output_image" />
+
+  <!-- make label image by fcn -->
+  <include file="$(find jsk_perception)/sample/sample_fcn_object_segmentation.launch">
+    <arg name="gui" default="false" />
+  </include>
+
+  <!-- label image to cost image -->
+  <node name="label_to_cost_image" pkg="safe_footstep_planner" type="label_to_cost_image" output="screen">
+    <remap from="/label_image" to="/fcn_object_segmentation/output"/>
+  </node>
+
+  <!-- gui -->
+  <group if="$(arg gui)">
+    <node name="raw_image_viewer" pkg="image_view" type="image_view">
+      <remap from="image" to="/depth_image_creator/output_image"/>
+    </node>
+    <node name="label_image_viewer"
+          pkg="image_view" type="image_view">
+      <remap from="image" to="label_image_decomposer/output/label_viz" />
+    </node>
+  </group>
+
+</launch>
