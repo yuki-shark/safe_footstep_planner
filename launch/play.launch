@@ -1,0 +1,13 @@
+<launch>
+  <arg name="bagfile" default="$(env HOME)/.ros/final_exp.bag"/>
+
+  <node name="rosbag_play" pkg="rosbag" type="play"
+        args="$(arg bagfile) -l --clock"
+        output="screen">
+  </node>
+
+  <param name="robot_description" textfile="$(find hrpsys_ros_bridge_tutorials)/models/CHIDORI_SENSORS.urdf" />
+
+  <node type="rviz" name="rviz" pkg="rviz"
+        args="-d $(find jsk_footstep_planner)/config/jaxon_footstep_planner_perception.rviz"/>
+</launch>
