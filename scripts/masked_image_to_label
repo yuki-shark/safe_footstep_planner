@@ -24,13 +24,13 @@ class image_converter:
     self.data_blue_sub   = message_filters.Subscriber("/blue_color_filter/image", Image)
     self.data_yellow_sub = message_filters.Subscriber("/yellow_color_filter/image", Image)
 
-    self.ts = message_filters.ApproximateTimeSynchronizer([self.data_red_sub, self.data_green_sub, self.data_blue_sub, self.data_yellow_sub], 10, 0.01)
+    self.ts = message_filters.ApproximateTimeSynchronizer([self.data_red_sub, self.data_green_sub, self.data_blue_sub, self.data_yellow_sub], 10, 0.3)
 
     self.ts.registerCallback(self.callback)
-    self.red_label    = rospy.get_param('~red_label', 0)
-    self.green_label  = rospy.get_param('~green_label', 0)
-    self.blue_label   = rospy.get_param('~blue_label', 0)
-    self.yellow_label = rospy.get_param('~yellow_label', 0)
+    self.red_label    = rospy.get_param('~red_label', 1)
+    self.green_label  = rospy.get_param('~green_label', 2)
+    self.blue_label   = rospy.get_param('~blue_label', 3)
+    self.yellow_label = rospy.get_param('~yellow_label', 4)
 
   def callback(self, data_red, data_green, data_blue, data_yellow):
     try:
