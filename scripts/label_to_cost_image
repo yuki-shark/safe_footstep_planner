@@ -56,16 +56,16 @@ class label_converter:
     label_image = label_image.flatten()
     database = self.getDatabase()
 
-    cost_image = np.array(list(map(lambda x: database.get(str(x), 0)*20, label_image))).reshape(shape)
+    cost_image = np.array(list(map(lambda x: database.get(str(x), 1), label_image))).reshape(shape)
 
     # convert type to "32SC1"
-    cost_image = cost_image.astype(np.int32)
+    # cost_image = cost_image.astype(np.int32)
     # convert type to "MONO8"
-    # cost_image = cost_image.astype(np.uint8)
+    cost_image = cost_image.astype(np.uint8)
 
     try:
-      image_msg = self.bridge.cv2_to_imgmsg(cost_image, "32SC1")
-      # image_msg = self.bridge.cv2_to_imgmsg(cost_image, "mono8")
+      # image_msg = self.bridge.cv2_to_imgmsg(cost_image, "32SC1")
+      image_msg = self.bridge.cv2_to_imgmsg(cost_image, "mono8")
       image_msg.header = data.header
       self.image_pub.publish(image_msg)
     except CvBridgeError as e:
