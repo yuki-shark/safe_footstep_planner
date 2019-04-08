@@ -54,29 +54,10 @@ class safe_footstep_operator:
 
   def targetFootholdCallback(self, data):
     self.target_foothold = data
-
-  def startOperation(self):
-    print('Press "y" to start foothold check.')
-    start = raw_input('>>> ')
-    if (start == 'y'):
-      while (True):
-        if (self.target_foothold):
-          print('Press "s" to show target foothold.')
-          print('Press "e" to execute check foothold.')
-          print('Press "f" to finish operation.')
-          key = raw_input('>>> ')
-          if (key == 's'):
-            print('Leg : %d' %self.target_foothold.leg)
-            print('Target Foothold : (%s %s %s)' %(self.target_foothold.target.x, self.target_foothold.target.y, self.target_foothold.target.z))
-          elif (key == 'e'):
-            self.executeCheckFoothold()
-          elif (key == 'f'):
-            break
-        else:
-          print('Operation node has not received target foothold topic')
-          time.sleep(1)
+    if self.target_foothold.leg == 1:
+      self.leg = 'Left'
     else:
-      print('Operation finished.')
+      self.leg = 'Right'
 
   def executeCheckFoothold(self):
     label = str(self.target_foothold.label)
@@ -92,36 +73,38 @@ class safe_footstep_operator:
     # modify target
     if (self.target_foothold.target.x < 0.0):
       self.target_foothold.target.x = 0.0
-    if (self.target_foothold.target.x > 0.3):
-      self.target_foothold.target.x = 0.3
-    if (self.target_foothold.target.y < -0.1):
-      self.target_foothold.target.y = -0.1
-    if (self.target_foothold.target.y > 0.1):
-      self.target_foothold.target.y = 0.1
+    if (self.target_foothold.target.x > 0.35):
+      self.target_foothold.target.x = 0.35
+    if (self.target_foothold.target.y < -0.05):
+      self.target_foothold.target.y = -0.05
+    if (self.target_foothold.target.y > 0.05):
+      self.target_foothold.target.y = 0.05
     if (self.target_foothold.target.z < 0.0):
       self.target_foothold.target.z = 0.0
-    if (self.target_foothold.target.z > 0.08):
-      self.target_foothold.target.z = 0.08
+    if (self.target_foothold.target.z > 0.10):
+      self.target_foothold.target.z = 0.10
 
     # wait for operator input
-    print('Leg : %d' %self.target_foothold.leg)
+    # print('Leg : %d' %self.target_foothold.leg)
+    print('Leg : %s' %self.leg)
     print('Target Foothold : (%s %s %s)' %(self.target_foothold.target.x, self.target_foothold.target.y, self.target_foothold.target.z))
-    print('Press "y" to start foothold check.')
-    start = raw_input('>>> ')
-    if (start == 'y'):
-      print('Foothold Checking...')
-      force_z = self.checkFootholdClient(self.target_foothold.target, self.target_foothold.leg)
-      # force_z = self.checkFootholdClient(msg)
-    else:
-      print('Foothold check Canceled.')
+    # print('Press "y" to start foothold check.')
+    # start = raw_input('>>> ')
+    # if (start == 'y'):
+    print('Foothold Checking...')
+    force_z = self.checkFootholdClient(self.target_foothold.target, self.target_foothold.leg)
+    # force_z = self.checkFootholdClient(msg)
+    # else:
+    #   print('Foothold check Canceled.')
 
     # set cost
+    # print('force_z : ' + str(force_z))
     force_offset = 50 # should be modified
-    force_threshold = 100 # should be modified
-    if (abs(force_z - force_offset) > force_threshold):
-      cost = 2
+    force_threshold = 50 # should be modified
+    if (abs(force_z) > force_threshold):
+      cost = 3
     else:
-      cost = 9
+      cost = 10
 
     # add data to database
     database = self.getDatabase()
@@ -130,6 +113,30 @@ class safe_footstep_operator:
     database.update(data)
     self.saveDatabase(database)
     print('Database Updated')
+
+  def startOperation(self):
+    # print('Press "y" to start foothold check.')
+    # start = raw_input('>>> ')
+    # if (start == 'y'):
+    while (True):
+      if (self.target_foothold):
+        print('Press "s" to show target foothold.')
+        print('Press "e" to execute check foothold.')
+        print('Press "f" to finish operation.')
+        key = raw_input('>>> ')
+        if (key == 's'):
+          # print('Leg : %d' %self.target_foothold.leg)
+          print('Leg : %s' %self.leg)
+          print('Target Foothold : (%s %s %s)' %(self.target_foothold.target.x, self.target_foothold.target.y, self.target_foothold.target.z))
+        elif (key == 'e'):
+          self.executeCheckFoothold()
+        elif (key == 'f'):
+          break
+      else:
+        print('Operation node has not received target foothold topic')
+        time.sleep(1)
+    # else:
+    #   print('Operation finished.')
 
 def main(args):
   rospy.init_node('safe_footstep_operator', anonymous=True)
