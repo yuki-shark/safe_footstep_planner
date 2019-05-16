@@ -17,10 +17,12 @@ if __name__ == '__main__':
     info_msg = CameraInfo()
     info_msg.header.frame_id = 'static_virtual_camera'
 
-    info_msg.height = 640
-    info_msg.width = 240
-    fovx = 60
-    fovy = 114
+    # info_msg.height = 640
+    info_msg.height = 480    
+    info_msg.width = 480
+    fovx = 98
+    # fovy = 114
+    fovy = 98    
 
     fx = info_msg.width / 2.0 / \
          np.tan(np.deg2rad(fovx / 2.0))

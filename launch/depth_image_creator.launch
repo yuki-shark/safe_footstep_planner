@@ -1,7 +1,5 @@
 <launch>
   <arg name="MANAGER" default="nodelet_manager" />
-  <arg name="interactive_marker" default="false" />
-  <arg name="use_laser_pointcloud" default="false" />
   <arg name="rviz" default="true" />
 
   <node name="$(arg MANAGER)"
@@ -9,135 +7,27 @@
 
   <!-- make static virtual camera -->
   <node pkg="safe_footstep_planner" name="static_virtual_camera" type="static_virtual_camera" output="screen" />
-  <include file="$(find safe_footstep_planner)/launch/tf_interactive_marker.launch" if="$(arg interactive_marker)" />
-  <!-- <node pkg="tf" type="static_transform_publisher" name="virtual_camera_broadcaster" args="1.6 0.0 0.08 -0.707107 0.707017 0.0 0.0 BODY static_virtual_camera 100" unless="$(arg interactive_marker)" /> -->
-  <node pkg="tf" type="static_transform_publisher" name="virtual_camera_broadcaster" args="1.4 0.0 0.07 -0.707107 0.707017 0.0 0.0 BODY static_virtual_camera 100" unless="$(arg interactive_marker)" />
-
-  <!-- concatenate cameras pointcloud -->
-  <node name="concatenate_data"
-        pkg="nodelet" type="nodelet"
-        args="load pcl/PointCloudConcatenateDataSynchronizer /$(arg MANAGER)">
-    <rosparam>
-      output_frame: /camera1_rgb_optical_frame
-      input_topics:
-        - /camera1/depth_registered/points
-        - /camera2/depth_registered/points
-      approximate_sync: true
-    </rosparam>
-  </node>
+  <!-- <node pkg="tf" type="static_transform_publisher" name="virtual_camera_broadcaster" args="1.4 0.0 0.07 -0.707107 0.707017 0.0 0.0 BODY static_virtual_camera 100" /> -->
+  <node pkg="tf" type="static_transform_publisher" name="virtual_camera_broadcaster" args="1.2 0.0 0.07 -0.707107 0.707017 0.0 0.0 BODY static_virtual_camera 100" />  
 
   <!-- get image from static virtual camera -->
   <node name="depth_image_creator"
         pkg="nodelet" type="nodelet"
         args="load jsk_pcl/DepthImageCreator /$(arg MANAGER)">
-    <remap from="~input" to="/concatenate_data/output" />
+    <remap from="~input" to="/multisense_local/image_points2_color" />
     <remap from="~info" to="/static_virtual_camera/camera_info" />
     <rosparam>
       use_approximate: true
-      max_queue_size: 20
+      max_queue_size: 80
     </rosparam>
   </node>
-
-  <!-- color filter for image from the virtual camera -->
-  <!-- <include file="$(find opencv_apps)/launch/hsv_color_filter.launch" > -->
-  <!--   <arg name="node_name" value="hsv_color_filter" /> -->
-  <!--   <arg name="image" value="/depth_image_creator/output_image" /> -->
-  <!--   <arg name="h_limit_max" value="119" doc="The maximum allowed field value Hue" /> -->
-  <!--   <arg name="h_limit_min" value="241" doc="The minimum allowed field value Hue" /> -->
-  <!--   <arg name="s_limit_max" value="256" doc="The maximum allowed field value Saturation" /> -->
-  <!--   <arg name="s_limit_min" value="0" doc="The minimum allowed field value Saturation" /> -->
-  <!--   <arg name="v_limit_max" value="256" doc="The maximum allowed field value Value" /> -->
-  <!--   <arg name="v_limit_min" value="0" doc="The minimum allowed field value Value" /> -->
-  <!--   <arg name="debug_view" value="false" /> -->
-  <!-- </include> -->
-
-  <!-- make point indices from filtered image -->
-  <!-- <node name="mask_to_point_indices" -->
-  <!--       pkg="nodelet" type="nodelet" -->
-  <!--       args="load jsk_pcl_utils/MaskImageToPointIndices $(arg MANAGER)"> -->
-  <!--   <remap from="~input" to="/hsv_color_filter/image" /> -->
-  <!-- </node> -->
-
-  <group if="$(arg use_laser_pointcloud)">
-    <!-- cut internsity from laser pointcloud -->
-    <node name="pointcloud_xyzi_to_xyz"
-          pkg="jsk_pcl_ros_utils" type="pointcloud_xyzi_to_xyz">
-      <remap from="~input" to="/accumulated_heightmap_pointcloud_static/output" />
-      <!-- <remap from="~input" to="/assemble_cloud" /> -->
-      <remap from="~output" to="/laser_pointcloud/output" />
-    </node>
-
-    <!-- cut rgb from cameras pointcloud -->
-    <node name="pointcloud_xyzrgb_to_xyz"
-          pkg="jsk_pcl_ros_utils" type="pointcloud_xyzrgb_to_xyz">
-      <remap from="~input" to="/concatenate_data/output" />
-      <remap from="~output" to="/cameras_pointcloud/output" />
-    </node>
-
-    <!-- concatenate laser and cameras pointcloud -->
-    <node name="concatenate_all_pointcloud"
-          pkg="nodelet" type="nodelet"
-          args="load pcl/PointCloudConcatenateDataSynchronizer /$(arg MANAGER)">
-      <rosparam>
-        output_frame: /map
-        input_topics:
-        - /laser_pointcloud/output
-        - /cameras_pointcloud/output
-        approximate_sync: true
-      </rosparam>
-    </node>
-
-    <!-- get image from static virtual camera -->
-    <node name="depth_image_creator_laser"
-          pkg="nodelet" type="nodelet"
-          args="load jsk_pcl/DepthImageCreator /$(arg MANAGER)">
-      <remap from="~input" to="/concatenate_all_pointcloud/output" />
-      <remap from="~info" to="/static_virtual_camera/camera_info" />
-      <rosparam>
-        use_approximate: true
-        max_queue_size: 50
-      </rosparam>
-    </node>
-  </group>
-
-  <!-- make organized PCL from rgb and depth images -->
-  <node name="points_xyzrgb_sw_registered"
-        pkg="nodelet" type="nodelet"
-        args="load depth_image_proc/point_cloud_xyzrgb /$(arg MANAGER)"
-        respawn="true" >
-    <remap from="rgb/image_rect_color"        to="/depth_image_creator_laser/output_image" if="$(arg use_laser_pointcloud)"/>
-    <remap from="rgb/image_rect_color"        to="/depth_image_creator/output_image"       unless="$(arg use_laser_pointcloud)"/>
-    <remap from="rgb/camera_info"             to="/static_virtual_camera/camera_info" />
-    <remap from="depth_registered/image_rect" to="/depth_image_creator_laser/output"       if="$(arg use_laser_pointcloud)"/>
-    <remap from="depth_registered/image_rect" to="/depth_image_creator/output"             unless="$(arg use_laser_pointcloud)"/>
-    <remap from="depth_registered/points"     to="/depth_image_creator/output/points" />
-    <rosparam if="$(arg use_laser_pointcloud)">
-      queue_size: 100
-    </rosparam>
-    <rosparam unless="$(arg use_laser_pointcloud)">
-      queue_size: 20
-    </rosparam>
-  </node>
-
-  <!-- extract PCL -->
-  <!-- <node name="extract_indices_target_label" -->
-  <!--       pkg="nodelet" type="nodelet" -->
-  <!--       args="load jsk_pcl/ExtractIndices $(arg MANAGER)"> -->
-  <!--   <remap from="~input" to="/depth_image_creator/output/points"/> -->
-  <!--   <remap from="~indices" to="/mask_to_point_indices/output" /> -->
-  <!--   <rosparam> -->
-  <!--     approximate_sync: true -->
-  <!--     queue_size: 100 -->
-  <!--     keep_organized: true -->
-  <!--   </rosparam> -->
-  <!-- </node> -->
 
   <!-- change pointcloud frame id to /map -->
   <node name="tf_transform_cloud"
         pkg="nodelet" type="nodelet"
         args="load jsk_pcl_utils/TfTransformCloud /$(arg MANAGER)">
     <!-- <remap from="~input" to="/extract_indices_target_label/output" /> -->
-    <remap from="~input" to="/depth_image_creator/output/points" />
+    <remap from="~input" to="/multisense_local/image_points2_color" />
     <rosparam>
       target_frame_id: map
     </rosparam>
@@ -146,8 +36,6 @@
   <!-- rviz -->
   <group if="$(arg rviz)">
     <node type="rviz" name="rviz" pkg="rviz" args="-d $(find safe_footstep_planner)/config/depth_image_creator.rviz"/>
-    <!-- <node type="rviz" name="rviz" pkg="rviz" args="-d $(find safe_footstep_planner)/config/depth_image_creator.rviz" if="$(arg interactive_marker)"/> -->
-    <!-- <node type="rviz" name="rviz" pkg="rviz" args="-d $(find safe_footstep_planner)/config/depth_image_creator_static.rviz" unless="$(arg interactive_marker)"/> -->
   </group>
 
 </launch>
