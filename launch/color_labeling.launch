@@ -54,8 +54,8 @@
     <arg name="h_limit_min" value="195" doc="The minimum allowed field value Hue" />
     <arg name="s_limit_max" value="256" doc="The maximum allowed field value Saturation" />
     <arg name="s_limit_min" value="136" doc="The minimum allowed field value Saturation" />
-    <arg name="v_limit_max" value="254" doc="The maximum allowed field value Value" />
-    <arg name="v_limit_min" value="66" doc="The minimum allowed field value Value" />
+    <arg name="v_limit_max" value="24"  doc="The maximum allowed field value Value" />
+    <arg name="v_limit_min" value="256" doc="The minimum allowed field value Value" />
     <arg name="debug_view" value="false" />
   </include>
 
