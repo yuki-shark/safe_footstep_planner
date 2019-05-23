@@ -16,6 +16,8 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   tf
   roseus
+  pcl_ros
+  jsk_recognition_utils
 )
 
 add_message_files(
@@ -47,3 +49,6 @@ target_link_libraries(rect_publisher ${catkin_LIBRARIES})
 
 add_executable(convert_to_map_coords src/convert_to_map_coords.cpp)
 target_link_libraries(convert_to_map_coords ${catkin_LIBRARIES})
+
+add_executable(target_height_publisher src/target_height_publisher.cpp)
+target_link_libraries(target_height_publisher ${catkin_LIBRARIES})
