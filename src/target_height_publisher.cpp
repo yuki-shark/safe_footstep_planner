@@ -64,8 +64,8 @@ void TargetHeightPublisher::targetCallback(const safe_footstep_planner::OnlineFo
     tf::Matrix3x3 rotation_matrix = transform.getBasis();
     tf::Vector3 rel_landing_pos; // map relative
     rel_landing_pos = translation_vector + rotation_matrix * landing_pos;
-    std::cerr << "******************* target_frame : " << target_frame << std::endl;
-    std::cerr << "translation_vector: " << translation_vector.getX() << " , " << translation_vector.getY() << " , " << translation_vector.getZ() << std::endl;
+    // std::cerr << "******************* target_frame : " << target_frame << std::endl;
+    // std::cerr << "translation_vector: " << translation_vector.getX() << " , " << translation_vector.getY() << " , " << translation_vector.getZ() << std::endl;
 
     double threshold = 0.03;
     double az = 0.0, az2 = 0.0;
@@ -102,10 +102,10 @@ void TargetHeightPublisher::targetCallback(const safe_footstep_planner::OnlineFo
         ps.z = tmp_pos.getZ();
         ps.l_r = msg->l_r;
         height_publisher_.publish(ps);
-        std::cerr << "foot pos : "<< landing_pos.getX() << ", " << landing_pos.getY() << ", " << landing_pos.getZ() << std::endl;
-        std::cerr << "map pos swg: "<< rel_landing_pos.getX() << ", " << rel_landing_pos.getY() << ", " << rel_landing_pos.getZ() << std::endl;
-        std::cerr << "map pos sup: "<< translation_vector.getX() << ", " << translation_vector.getY() << ", " << translation_vector.getZ() << std::endl;
-        std::cerr << "height : "<< ps.x << ", " << ps.y << ", " << ps.z << ", " << ps.l_r << std::endl;
+        // std::cerr << "foot pos : "<< landing_pos.getX() << ", " << landing_pos.getY() << ", " << landing_pos.getZ() << std::endl;
+        // std::cerr << "map pos swg: "<< rel_landing_pos.getX() << ", " << rel_landing_pos.getY() << ", " << rel_landing_pos.getZ() << std::endl;
+        // std::cerr << "map pos sup: "<< translation_vector.getX() << ", " << translation_vector.getY() << ", " << translation_vector.getZ() << std::endl;
+        // std::cerr << "height : "<< ps.x << ", " << ps.y << ", " << ps.z << ", " << ps.l_r << std::endl;
     }
 }
 
