@@ -5,8 +5,11 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/conversions.h>
+#include <pcl/PointIndices.h>
+#include <pcl/segmentation/sac_segmentation.h>
 #include <tf/transform_listener.h>
 #include <jsk_recognition_utils/pcl_conversion_util.h>
+#include <jsk_recognition_utils/geo_util.h>
 #include <safe_footstep_planner/OnlineFootStep.h>
 
 class TargetHeightPublisher
@@ -43,9 +46,9 @@ void TargetHeightPublisher::pointcloudCallback(const sensor_msgs::PointCloud2::C
 
 void TargetHeightPublisher::targetCallback(const safe_footstep_planner::OnlineFootStep::ConstPtr& msg)
 {
-    double x = msg->x;
-    double y = msg->y;
-    double z = msg->z;
+    double px = msg->x;
+    double py = msg->y;
+    double pz = msg->z;
 
     // transform
     std::string target_frame;
@@ -59,7 +62,7 @@ void TargetHeightPublisher::targetCallback(const safe_footstep_planner::OnlineFo
     tf::StampedTransform transform;
     listener_.lookupTransform("/map", target_frame, ros::Time(0), transform); // map relative to target_frame
     tf::Vector3 landing_pos; // suppoting foot relative
-    landing_pos.setValue(x, y, z);
+    landing_pos.setValue(px, py, pz);
     tf::Vector3 translation_vector = transform.getOrigin();
     tf::Matrix3x3 rotation_matrix = transform.getBasis();
     tf::Vector3 rel_landing_pos; // map relative
@@ -71,6 +74,7 @@ void TargetHeightPublisher::targetCallback(const safe_footstep_planner::OnlineFo
     double az = 0.0, az2 = 0.0;
     int count = 0, count2 = 0;
     pcl::PointXYZ pp;
+    pcl::PointIndices::Ptr indices;
 
     if (cloud_) {
         for (int i = 0; i < cloud_->size(); i++) {
@@ -79,6 +83,7 @@ void TargetHeightPublisher::targetCallback(const safe_footstep_planner::OnlineFo
                 std::fabs(pp.y - rel_landing_pos.getY()) < threshold) {
                 az += pp.z;
                 count++;
+                indices->indices.push_back(i);
             }
             if (std::fabs(pp.x - translation_vector.getX()) < threshold &&
                 std::fabs(pp.y - translation_vector.getY()) < threshold) {
@@ -106,6 +111,58 @@ void TargetHeightPublisher::targetCallback(const safe_footstep_planner::OnlineFo
         std::cerr << "map pos swg: "<< rel_landing_pos.getX() << ", " << rel_landing_pos.getY() << ", " << rel_landing_pos.getZ() << std::endl;
         std::cerr << "map pos sup: "<< translation_vector.getX() << ", " << translation_vector.getY() << ", " << translation_vector.getZ() << std::endl;
         std::cerr << "height : "<< ps.x << ", " << ps.y << ", " << ps.z << ", " << ps.l_r << std::endl;
+
+        // estimage plane by RANSAC
+        int minimun_indices = 10;
+        pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+        pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+        pcl::SACSegmentation<pcl::PointXYZ> seg;
+        seg.setOptimizeCoefficients (true);
+        seg.setRadiusLimits(0.01, std::numeric_limits<double>::max ());
+        seg.setMethodType(pcl::SAC_RANSAC);
+        seg.setDistanceThreshold(0.1);
+        seg.setModelType(pcl::SACMODEL_PLANE);
+        seg.setInputCloud(cloud_);
+        //
+        seg.setIndices(indices);
+        seg.setMaxIterations(100);
+        seg.segment(*inliers, *coefficients);
+
+        std::cerr << " inliers " << inliers->indices.size() << std::endl;
+        if (inliers->indices.size() == 0) {
+            std::cerr <<  " no plane" << std::endl;
+        }
+        else if (inliers->indices.size() < minimun_indices) {
+            std::cerr <<  " no enough inliners " << inliers->indices.size() <<  std::endl;
+        }
+        else {
+            Eigen::Vector3f z(0, 0, 1);
+            jsk_recognition_utils::Plane plane(coefficients->values);
+            if (!plane.isSameDirection(z)) {
+                plane = plane.flip();
+            }
+            Eigen::Vector3f n = plane.getNormal();
+            // std::cerr << "x : " << n.getX() << "  y : " << n.getY() << "  z : " << n.getZ() << std::endl;
+            std::cerr << "plane normal : " << n << std::endl;
+            // Eigen::Vector3f x = pose_.matrix().block<3, 3>(0, 0) * Eigen::Vector3f::UnitX();
+            // if (acos(n.dot(x)) == 0) {
+            //     std::cerr << "hoge" << std::endl;
+            // }
+            // Eigen::Vector3f rotation_axis = n.cross(x).normalized();
+            // Eigen::Vector3f new_x = Eigen::AngleAxisf(M_PI / 2.0, rotation_axis) * n;
+            // if (acos(new_x.dot(x)) > M_PI / 2.0) {
+            //     new_x = - new_x;
+            // }
+            // Eigen::Vector3f new_y = n.cross(new_x);
+            // Eigen::Matrix3f new_rot_mat;
+            // new_rot_mat << new_x, new_y, n;
+            // Eigen::Quaternionf new_rot(new_rot_mat);
+            // Eigen::Vector3f p(pose_.translation());
+            // double alpha = (- plane.getD() - n.dot(p)) / (n.dot(z));
+            // Eigen::Vector3f q = p + alpha * z;
+
+            // Eigen::Affine3f new_pose = Eigen::Translation3f(q) * new_rot;
+        }
     }
 }
 
