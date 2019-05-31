@@ -1,0 +1,19 @@
+<launch>
+  <arg name="MANAGER"     default="organized_multi_plane_manager" />
+  <arg name="point_cloud" default="/accumulated_heightmap_pointcloud_maprelative/output" />
+  <!-- <arg name="point_cloud" default="/multisense_local/image_points2_color" /> -->
+
+  <node name="$(arg MANAGER)"
+        pkg="nodelet" type="nodelet" args="manager" />
+  <node pkg="nodelet" type="nodelet" name="multi_plane_estimate"
+        args="load jsk_pcl/OrganizedMultiPlaneSegmentation $(arg MANAGER)"
+        clear_params="false">
+    <remap from="~input" to="$(arg point_cloud)"/>
+    <rosparam>
+      max_curvature: 0.01
+      estimate_normal: true
+      min_size: 100
+    </rosparam>
+  </node>
+
+</launch>
