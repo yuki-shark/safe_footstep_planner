@@ -24,6 +24,7 @@ add_message_files(
   FILES
   TargetFoothold.msg
   OnlineFootStep.msg
+  SteppableRegion.msg
 )
 
 add_service_files(
