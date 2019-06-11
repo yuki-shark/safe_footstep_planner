@@ -25,11 +25,19 @@ namespace safe_footstep_util
         e(i,j) = t[i][j];
   }
 
-  static void vectorTFToEigen (const tf::Vector3& t, Eigen::Vector3f& k)
+  void vectorTFToEigen (const tf::Vector3& t, Eigen::Vector3f& k)
   {
     k(0) = t[0];
     k(1) = t[1];
     k(2) = t[2];
+  }
+
+  void transformPoint (const geometry_msgs::Point32& t, const Eigen::Matrix3f& rot, const Eigen::Vector3f& pos, geometry_msgs::Point32& k)
+  {
+    Eigen::Vector3f tmp_pos = rot.transpose() * (Eigen::Vector3f(t.x, t.y, t.z) - pos);
+    k.x = tmp_pos(0);
+    k.y = tmp_pos(1);
+    k.z = tmp_pos(2);
   }
 
   Eigen::Vector3f rpyFromRot (const Eigen::Matrix3f& m)
