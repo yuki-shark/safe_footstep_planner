@@ -25,6 +25,7 @@ add_message_files(
   TargetFoothold.msg
   OnlineFootStep.msg
   SteppableRegion.msg
+  PolygonArray.msg
 )
 
 add_service_files(
