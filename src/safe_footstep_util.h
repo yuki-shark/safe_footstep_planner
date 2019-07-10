@@ -1,20 +1,7 @@
 #ifndef SAFE_UTIL_H
 #define SAFE_UTIL_H
 
-// #include <ros/ros.h>
-// #include <std_msgs/Header.h>
-// #include <sensor_msgs/PointCloud2.h>
-// #include <geometry_msgs/PointStamped.h>
-// #include <pcl/point_cloud.h>
-// #include <pcl/point_types.h>
-// #include <pcl/conversions.h>
-// #include <pcl/PointIndices.h>
-// #include <pcl/segmentation/sac_segmentation.h>
-// #include <tf/transform_listener.h>
-// #include <jsk_recognition_utils/pcl_conversion_util.h>
-// #include <jsk_recognition_utils/geo_util.h>
-// #include <safe_footstep_planner/OnlineFootStep.h>
-// #include "safe_footstep_util.h"
+#define eps_eq(a, b, c)  (fabs((a)-(b)) <= c)
 
 namespace safe_footstep_util
 {
@@ -30,6 +17,20 @@ namespace safe_footstep_util
     k(0) = t[0];
     k(1) = t[1];
     k(2) = t[2];
+  }
+
+  void pointsToEigen (const geometry_msgs::Point32& t, Eigen::Vector3f& k)
+  {
+    k(0) = t.x;
+    k(1) = t.y;
+    k(2) = t.z;
+  }
+
+  void eigenToPoints (const Eigen::Vector3f& t, geometry_msgs::Point32& k)
+  {
+    k.x = t(0);
+    k.y = t(1);
+    k.z = t(2);
   }
 
   void transformPoint (const geometry_msgs::Point32& t, const Eigen::Matrix3f& rot, const Eigen::Vector3f& pos, geometry_msgs::Point32& k)
@@ -88,6 +89,28 @@ namespace safe_footstep_util
     foot_rot(0,0) = xv1(0); foot_rot(1,0) = xv1(1); foot_rot(2,0) = xv1(2);
     foot_rot(0,1) = yv1(0); foot_rot(1,1) = yv1(1); foot_rot(2,1) = yv1(2);
     foot_rot(0,2) = n(0);  foot_rot(1,2) = n(1);  foot_rot(2,2) = n(2);
+  }
+
+  bool compare_eigen3f(const Eigen::Vector3f& lv, const Eigen::Vector3f& rv)
+  {
+    return (lv(0) < rv(0)) || (lv(0) == rv(0) && lv(1) < rv(1)) || (lv(0) == rv(0) && lv(1) == rv(1) && lv(2) < rv(2));
+  }
+
+  double calc_cross_product(const Eigen::Vector3f& a, const Eigen::Vector3f& b, const Eigen::Vector3f& o)
+  {
+    return (a(0) - o(0)) * (b(1) - o(1)) - (a(1) - o(1)) * (b(0) - o(0));
+  }
+
+  void calc_convex_hull (std::vector<Eigen::Vector3f>& vs, std::vector<Eigen::Vector3f>& ch)
+  {
+    int n_vs = vs.size(), n_ch = 0;
+    ch.resize(2*n_vs);
+    std::sort(vs.begin(), vs.end(), compare_eigen3f);
+    for (int i = 0; i < n_vs; ch[n_ch++] = vs[i++])
+      while (n_ch >= 2 && calc_cross_product(ch[n_ch-1], vs[i], ch[n_ch-2]) <= 0) n_ch--;
+    for (int i = n_vs-2, j = n_ch+1; i >= 0; ch[n_ch++] = vs[i--])
+      while (n_ch >= j && calc_cross_product(ch[n_ch-1], vs[i], ch[n_ch-2]) <= 0) n_ch--;
+    ch.resize(n_ch-1);
   }
 }
 

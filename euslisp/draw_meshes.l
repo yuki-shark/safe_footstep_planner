@@ -28,9 +28,16 @@
   (dotimes (i (length meshes)) (send (elt meshes i) :draw-on :flush t))
   ) ;; defun
 
-(make-irtviewer)
+;; (make-irtviewer)
+(send *irtviewer* :draw-objects)
 (ros::roseus "draw_polygons")
-(ros::subscribe "meshed_polygons" safe_footstep_planner::PolygonArray #'callback 1)
+(ros::subscribe "combined_meshed_polygons" safe_footstep_planner::PolygonArray #'callback 1)
 (do-until-key
  (ros::spin-once))
 (format t "Shutdown Controller~%")
+
+#|
+(roseus)
+(make-irtviewer)
+(load "draw_meshes.l")
+|#
