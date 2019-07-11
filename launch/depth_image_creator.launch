@@ -8,7 +8,8 @@
   <!-- make static virtual camera -->
   <node pkg="safe_footstep_planner" name="static_virtual_camera" type="static_virtual_camera" output="screen" />
   <!-- <node pkg="tf" type="static_transform_publisher" name="virtual_camera_broadcaster" args="1.4 0.0 0.07 -0.707107 0.707017 0.0 0.0 BODY static_virtual_camera 100" /> -->
-  <node pkg="tf" type="static_transform_publisher" name="virtual_camera_broadcaster" args="1.2 0.0 0.07 -0.707107 0.707017 0.0 0.0 BODY static_virtual_camera 100" />  
+  <!-- <node pkg="tf" type="static_transform_publisher" name="virtual_camera_broadcaster" args="1.2 0.0 0.07 -0.707107 0.707017 0.0 0.0 BODY static_virtual_camera 100" /> -->
+  <node pkg="tf" type="static_transform_publisher" name="virtual_camera_broadcaster" args="1 0.0 10 -0.707107 0.707017 0.0 0.0 BODY static_virtual_camera 100" />
 
   <!-- get image from static virtual camera -->
   <node name="depth_image_creator"
@@ -21,6 +22,39 @@
       max_queue_size: 80
     </rosparam>
   </node>
+
+  <!-- remove noise -->
+  <node name="dilate_mask_image"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_perception/DilateMaskImage $(arg MANAGER)">
+    <remap from="~input" to="/red_color_filter/image" />
+    <rosparam>
+      method: 0
+      size: 3
+    </rosparam>
+  </node>
+
+  <node name="erode_mask_image"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_perception/ErodeMaskImage $(arg MANAGER)">
+    <remap from="~input" to="/dilate_mask_image/output" />
+    <rosparam>
+      method: 0
+      size: 3
+    </rosparam>
+  </node>
+
+  <!-- multi plane recognition -->
+  <include file="$(find opencv_apps)/launch/find_contours.launch">
+    <!-- <arg name="image"  value="/red_color_filter/image" /> -->
+    <arg name="image"  value="/erode_mask_image/output" />
+    <arg name="debug_view"  value="true" />
+  </include>
+  <!-- <include file="$(find safe_footstep_planner)/launch/multi_plane_recognition.launch" /> -->
+
+  <!-- plane polygon to triangle mesh -->
+  <node pkg="safe_footstep_planner" type="polygon-to-mesh.l"
+        name="polygon_to_mesh" output="screen" />
 
   <!-- change pointcloud frame id to /map -->
   <node name="tf_transform_cloud"
