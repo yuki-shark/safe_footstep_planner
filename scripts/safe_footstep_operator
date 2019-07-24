@@ -41,7 +41,7 @@ class safe_footstep_operator:
     try:
       check_foothold = rospy.ServiceProxy('check_foothold', CheckFoothold)
       res = check_foothold(target_point, leg)
-      return res.force_z
+      return res.stiffness
     except rospy.ServiceException, e:
       print "[check foothold] Service call failed: %s"%e
 
@@ -92,19 +92,23 @@ class safe_footstep_operator:
     # start = raw_input('>>> ')
     # if (start == 'y'):
     print('Foothold Checking...')
-    force_z = self.checkFootholdClient(self.target_foothold.target, self.target_foothold.leg)
+    k = self.checkFootholdClient(self.target_foothold.target, self.target_foothold.leg)
     # force_z = self.checkFootholdClient(msg)
     # else:
     #   print('Foothold check Canceled.')
 
     # set cost
     # print('force_z : ' + str(force_z))
-    force_offset = 50 # should be modified
-    force_threshold = 50 # should be modified
-    if (abs(force_z) > force_threshold):
-      cost = 3
-    else:
-      cost = 10
+    # force_offset = 50 # should be modified
+    # force_threshold = 50 # should be modified
+    # if (abs(force_z) > force_threshold):
+    #   cost = 3
+    # else:
+    #   cost = 10
+
+    k_offset = 1.2e5
+    w = 1.5
+    cost = max(0, int(round(-w * np.log(k/k_offset))))
 
     # add data to database
     database = self.getDatabase()
