@@ -25,13 +25,13 @@
     (when (eq (send req :leg) 1)
       (format t "Use lleg to check foothold~%")
       (setq stiffness (foothold-check :target-x target-x :target-y target-y :target-z target-z
-                                      :fz-thresh 30 :step-on-p-gain 0.002 :step-off-p-gain 0.004
+                                      :fz-thresh 10 :step-on-p-gain 0.002 :step-off-p-gain 0.002
                                       :fix-limb :rleg :move-limb :lleg))
       ) ;; when leg = 1 (lleg)
     (when (eq (send req :leg) 2)
       (format t "Use rleg to check foothold~%")
       (setq stiffness (foothold-check :target-x target-x :target-y target-y :target-z target-z
-                                      :fz-thresh 30 :step-on-p-gain 0.002 :step-off-p-gain 0.004
+                                      :fz-thresh 10 :step-on-p-gain 0.002 :step-off-p-gain 0.002
                                       :fix-limb :lleg :move-limb :rleg))
       ) ;; when leg = 2 (rleg)
     ;; (setq min_z (* 1000 (send req :target :x)))

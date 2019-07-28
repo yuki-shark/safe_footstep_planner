@@ -275,9 +275,8 @@
   (setq pz (* (- (* 0.5 (+ initial-pz final-pz))
                  mean-pz)
               0.001))
-  ;; (setq fz (- mean-fz
-  ;;             (* 0.5 (+ initial-fz final-fz))))
-  (setq fz mean-fz)
+  (setq pz (max 0.0001 pz))
+  (setq fz (- mean-fz fz-thresh))
   (setq stiffness (/ (abs fz) (abs pz)))
   (format t "pz : ~A [m]~%" pz)
   (format t "fz : ~A [N]~%" (abs fz))
