@@ -15,12 +15,12 @@
     (when (equal move-limb :lleg)
       (setq is-rleg-ik-enable t)
       (setq is-lleg-ik-enable nil)
-      (setq fix-limb-default-zmp #f(30 20 0))
+      (setq default-zmp-offsets (list #f(30 20 0) #f(30 -20 0)))
       )
     (when (equal move-limb :rleg)
       (setq is-rleg-ik-enable nil)
       (setq is-lleg-ik-enable t)
-      (setq fix-limb-default-zmp #f(30 -20 0))
+      (setq default-zmp-offsets (list #f(30 -20 0) #f(30 20 0)))
       )
     )
 
@@ -44,15 +44,20 @@
     (send *ri* :set-auto-balancer-param
           :leg-names (list fix-limb)
           :transition-time 10.0
-          :default-zmp-offsets (list fix-limb-default-zmp)
+          :default-zmp-offsets default-zmp-offsets
           )
     (send *ri* :start-auto-balancer)
     (send *ri* :set-st-param
           :is-ik-enable (list is-rleg-ik-enable is-lleg-ik-enable)
           :is-feedback-control-enable (list t t)
-          :is-zmp-calc-enable (list t t)
+          ;; :is-feedback-control-enable (list is-rleg-ik-enable is-lleg-ik-enable)
+          ;; :is-zmp-calc-enable (list t t)
+          :is-zmp-calc-enable (list is-rleg-ik-enable is-lleg-ik-enable)
           :eefm-use-force-difference-control nil)
+          ;; :eefm-use-force-difference-control t)
     (send *ri* :start-st)
+    (unix:sleep 3)
+
     (format t "Step On~%")
     (format t "Stepping On...~%")
     (progn
@@ -61,10 +66,20 @@
       (send *ri* :angle-vector (send *robot* :angle-vector) 1000)
       (send *ri* :wait-interpolation)
       )
+    (setq x 100)
+    (while (< x target-x)
+      (progn
+        (send *robot* :angle-vector default-pose)
+        (send *robot* move-limb :move-end-pos (float-vector x 0 (+ target-z 40)))
+        (send *ri* :angle-vector (send *robot* :angle-vector) 300)
+        (send *ri* :wait-interpolation)
+        )
+      (setq x (+ x 100))
+      )
     (progn
       (send *robot* :angle-vector default-pose)
       (send *robot* move-limb :move-end-pos (float-vector target-x target-y (+ target-z 40)))
-      (send *ri* :angle-vector (send *robot* :angle-vector) 1000)
+      (send *ri* :angle-vector (send *robot* :angle-vector) 300)
       (send *ri* :wait-interpolation)
       )
     (progn
@@ -79,6 +94,7 @@
             :frame "world"
             :update-freq 200
             :p-gain step-on-p-gain
+            :transition-time 0.5
             )
       (send *ri* :start-reference-force-updater move-limb)
       )
@@ -86,6 +102,7 @@
     (format t "Watching Force...~%")
     (setq *tmp-robot* *robot*)
     (send *ri* :start-log)
+    (unix:sleep 1)
     ;; stepping on
     (progn
       (send *robot* :angle-vector default-pose)
@@ -99,6 +116,7 @@
                     fz-thresh)
                  (not initial-pz))
         (send *tmp-robot* :angle-vector (send *ri* :state :potentio-vector))
+        (send (car (send *tmp-robot* :links)) :newcoords (send *ri* :state :imucoords))
         (setq initial-pz (elt (v- (send (send *tmp-robot* (read-from-string (format nil "~a-end-coords" move-limb))) :worldpos)
                                   (send (send *tmp-robot* (read-from-string (format nil "~a-end-coords" fix-limb))) :worldpos))
                               2))
@@ -110,6 +128,7 @@
     (if (not initial-pz)
         (progn
           (send *tmp-robot* :angle-vector (send *ri* :state :potentio-vector))
+          (send (car (send *tmp-robot* :links)) :newcoords (send *ri* :state :imucoords))
           (setq initial-pz (elt (v- (send (send *tmp-robot* (read-from-string (format nil "~a-end-coords" move-limb))) :worldpos)
                                     (send (send *tmp-robot* (read-from-string (format nil "~a-end-coords" fix-limb))) :worldpos))
                                 2))
@@ -128,6 +147,7 @@
       (when (eq num 0)
         (setq mean-fz (elt (send *ri* :state :off-force-vector move-limb) 2))
         (send *tmp-robot* :angle-vector (send *ri* :state :potentio-vector))
+        (send (car (send *tmp-robot* :links)) :newcoords (send *ri* :state :imucoords))
         (setq mean-pz (elt (v- (send (send *tmp-robot* (read-from-string (format nil "~a-end-coords" move-limb))) :worldpos)
                                (send (send *tmp-robot* (read-from-string (format nil "~a-end-coords" fix-limb))) :worldpos))
                            2)))
@@ -136,6 +156,7 @@
                             (elt (send *ri* :state :off-force-vector move-limb) 2))
                          (+ num 1)))
         (send *tmp-robot* :angle-vector (send *ri* :state :potentio-vector))
+        (send (car (send *tmp-robot* :links)) :newcoords (send *ri* :state :imucoords))
         (setf mean-pz (/ (+ (* mean-pz  num)
                             (elt (v- (send (send *tmp-robot* (read-from-string (format nil "~a-end-coords" move-limb))) :worldpos)
                                      (send (send *tmp-robot* (read-from-string (format nil "~a-end-coords" fix-limb))) :worldpos))
@@ -150,9 +171,14 @@
     (format t "Stepping Off...~%")
     ;; (setq step-off-p-gain (max step-off-p-gain (/ (abs mean-fz) 10000)))
     ;; (format t "p gain: ~A [mm]~%" step-off-p-gain)
+    ;; (send *ri* :set-reference-force-updater-param move-limb
+    ;;       :p-gain step-off-p-gain
+    ;;       )
     (send *ri* :set-reference-force-updater-param move-limb
-          :p-gain step-off-p-gain
+          :transition-time 5
           )
+    (send *ri* :stop-reference-force-updater move-limb)
+
     ;; stepping off
     (progn
       (send *robot* :angle-vector default-pose)
@@ -166,6 +192,7 @@
                     fz-thresh)
                  (not final-pz))
         (send *tmp-robot* :angle-vector (send *ri* :state :potentio-vector))
+        (send (car (send *tmp-robot* :links)) :newcoords (send *ri* :state :imucoords))
         (setq final-pz (elt (v- (send (send *tmp-robot* (read-from-string (format nil "~a-end-coords" move-limb))) :worldpos)
                                 (send (send *tmp-robot* (read-from-string (format nil "~a-end-coords" fix-limb))) :worldpos))
                             2))
@@ -195,10 +222,20 @@
       (send *ri* :stop-reference-force-updater move-limb)
       )
     (send *ri* :save-log "/tmp/foothold_check")
+    (setq x (- target-x 100))
+    (while (> x 0)
+      (progn
+        (send *robot* :angle-vector default-pose)
+        (send *robot* move-limb :move-end-pos (float-vector x 0 (+ target-z 40)))
+        (send *ri* :angle-vector (send *robot* :angle-vector) 300)
+        (send *ri* :wait-interpolation)
+        )
+      (setq x (- x 100))
+      )
     (progn
       (send *robot* :angle-vector default-pose)
       (send *robot* move-limb :move-end-pos (float-vector 0 0 (+ target-z 40)))
-      (send *ri* :angle-vector (send *robot* :angle-vector) 1000)
+      (send *ri* :angle-vector (send *robot* :angle-vector) 300)
       (send *ri* :wait-interpolation)
       )
     (progn
