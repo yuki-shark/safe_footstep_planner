@@ -14,7 +14,7 @@
 #include <safe_footstep_planner/OnlineFootStep.h>
 #include <safe_footstep_planner/SteppableRegion.h>
 #include <safe_footstep_planner/PolygonArray.h>
-#include "safe_footstep_util.h"
+#include <safe_footstep_planner/safe_footstep_util.h>
 
 class SteppableRegionPublisher
 {

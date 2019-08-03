@@ -38,10 +38,11 @@ add_service_files(
 generate_messages(DEPENDENCIES geometry_msgs)
 
 catkin_package(
-
+  INCLUDE_DIRS include
 )
 
 include_directories(
+  include
   ${catkin_INCLUDE_DIRS}
 )
 
