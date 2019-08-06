@@ -1,7 +1,9 @@
 #ifndef SAFE_UTIL_H
 #define SAFE_UTIL_H
 
-#define eps_eq(a, b, c)  (fabs((a)-(b)) <= c)
+#define deg2rad(x) ((x)*M_PI/180)
+#define rad2deg(rad) (rad*180/M_PI)
+#define eps_eq(a, b, c) (fabs((a)-(b)) <= c)
 
 namespace safe_footstep_util
 {
@@ -39,6 +41,26 @@ namespace safe_footstep_util
     k.x = tmp_pos(0);
     k.y = tmp_pos(1);
     k.z = tmp_pos(2);
+  }
+
+  void convertTFToPose(const tf::Transform& tf, geometry_msgs::Pose& pose){
+    pose.orientation.x = tf.getRotation().getAxis().x();
+    pose.orientation.y = tf.getRotation().getAxis().y();
+    pose.orientation.z = tf.getRotation().getAxis().z();
+    pose.orientation.w = tf.getRotation().getAxis().w();
+    pose.position.x = tf.getOrigin().getX();
+    pose.position.y = tf.getOrigin().getY();
+    pose.position.z = tf.getOrigin().getZ();
+  }
+
+  void convertPoseToTF(const geometry_msgs::Pose& pose, tf::Transform& tf){
+    tf.getRotation().getAxis().setX(pose.orientation.x);
+    tf.getRotation().getAxis().setY(pose.orientation.y);
+    tf.getRotation().getAxis().setZ(pose.orientation.z);
+    tf.getRotation().getAxis().setW(pose.orientation.w);
+    tf.getOrigin().setX(pose.position.x);
+    tf.getOrigin().setY(pose.position.y);
+    tf.getOrigin().setZ(pose.position.z);
   }
 
   Eigen::Vector3f rpyFromRot (const Eigen::Matrix3f& m)
