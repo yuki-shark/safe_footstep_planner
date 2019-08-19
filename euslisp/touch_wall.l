@@ -166,7 +166,7 @@
         ;; (send-all (send *robot* :joint-list) :joint-angle)
         :translation-axis (list t t t t)
         :rotation-axis (list t t nil nil)
-        :debug-view t
+        :debug-view nil
         :root-virtual-mode :6dof
         :optimize-torque? nil
         :revert-if-fail nil
