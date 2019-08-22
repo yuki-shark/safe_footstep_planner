@@ -73,7 +73,6 @@
 
 (defun setup-wall
     ()
-  (send *ri* :set-emergency-stopper-param :default-retrieve-time 0.5)
   (setq *board* (make-cube 1 1 1)) ;; dummy
   (objects (list *robot* *board*))
   (send *robot* :rarm :collar-y :max-angle 30)
@@ -82,20 +81,93 @@
   (setq *l_r* 0) ;; dummy
   )
 
+(defun emergency-touch-wall
+    ()
+  (setq *contact-list*
+        (list (generate-contact-ik-arg-from-rect-face :rect-face *face* :name "larm")
+              (generate-contact-ik-arg-from-rect-face :rect-face *face* :name "rarm")
+              ))
+  (setq *robot-env*
+        (instance robot-environment :init :robot *robot* :contact-list *contact-list* :root-virtual-mode :6dof))
+  (setq *instant-config-task*
+        (instance instant-configuration-task :init
+                  :robot-env *robot-env*
+                  :drive-joint-list nil
+                  :only-kinematics? nil
+                  :kin-target-coords-list
+                  (list
+                   (send (send (send *robot* :lleg :end-coords) :copy-worldcoords) :translate *lleg-trans-pos*)
+                   (send (send (send *robot* :rleg :end-coords) :copy-worldcoords) :translate *rleg-trans-pos*)
+                   (send *robot-env* :contact "larm" :contact-coords)
+                   (send *robot-env* :contact "rarm" :contact-coords)
+                   (make-coords :pos *cog-pos*)
+                   )
+                  :kin-attention-coords-list
+                  (list
+                   (send *robot* :lleg :end-coords)
+                   (send *robot* :rleg :end-coords)
+                   (send *robot* :larm :end-coords)
+                   (send *robot* :rarm :end-coords)
+                   :cog
+                   )
+                  :kin-scale-list
+                  (list
+                   1
+                   1
+                   (list 1 1 1 0 0 0)
+                   (list 1 1 1 0 0 0)
+                   (list 1 1 0 0 0 0)
+                   )
+                  :contact-target-coords-list
+                  (list
+                   (if (equal *l_r* 0)
+                       (send (send (send *robot* :lleg :end-coords) :copy-worldcoords) :translate *lleg-trans-pos*)
+                     (send (send (send *robot* :rleg :end-coords) :copy-worldcoords) :translate *rleg-trans-pos*))
+                   (send *robot-env* :contact "larm" :contact-coords)
+                   (send *robot-env* :contact "rarm" :contact-coords)
+                   )
+                  :contact-attention-coords-list
+                  (list
+                   (if (equal *l_r* 0)
+                       (send *robot* :lleg :end-coords)
+                     (send *robot* :rleg :end-coords))
+                   (send *robot* :larm :end-coords)
+                   (send *robot* :rarm :end-coords)
+                   )
+                  :contact-constraint-list
+                  (list
+                   (instance default-contact-constraint
+                             :init-from-support-polygon :support-polygon nil)
+                   (instance default-contact-constraint
+                             :init-from-support-polygon :support-polygon nil)
+                   (instance default-contact-constraint
+                             :init-from-support-polygon :support-polygon nil)
+                   )
+                  ))
+  (setq *sqp-opt*
+        (instance sqp-optimization :init
+                  :config-task *instant-config-task*
+                  :no-visualize? t
+                  :no-print? t
+                  ))
+  (send *sqp-opt* :optimize :loop-num 10)
+  (send *robot-env* :dissoc-root-virtual)
+  )
+
 (defun move-robot
     ()
   (let* ((root-pos))
-    (when (boundp '*axis*)
-      (send *axis* :dissoc *robot*))
+    ;; (when (boundp '*axis*)
+    ;;   (send *axis* :dissoc *robot*))
     (send *robot* :reset-pose)
     (send *robot* :fix-leg-to-coords (make-coords))
     (setq root-pos (scale -1 (send (send (send *robot* :torso-root-link) :copy-worldcoords) :pos)))
     (send *robot* :newcoords (make-coords :pos root-pos))
-    (setq *axis* (make-cascoords :pos root-pos))
-    (send *axis* :assoc *robot*)
-    (setq *tmp-angle* 10)
-    (send *axis* :rotate (deg2rad *tmp-angle*) :y)
-    (send *robot* :legs :ankle-p :joint-angle (- (send *robot* :rleg :ankle-p :joint-angle) *tmp-angle*))
+    ;; (setq *axis* (make-cascoords :pos root-pos))
+    ;; (send *axis* :assoc *robot*)
+    ;; (setq *tmp-angle* 0)
+    ;; (send *axis* :rotate (deg2rad *tmp-angle*) :y)
+    ;; (send *robot* :legs :ankle-p :joint-angle (- (send *robot* :rleg :ankle-p :joint-angle) *tmp-angle*))
     )
   ;; move swing foot to landing pos
   (setq *rleg-trans-pos* #f(0 0 0))
@@ -116,66 +188,333 @@
              ))
       )
     )
+  (setq *cog-pos* (float-vector 200 0 (elt (send (send *robot* :rleg :end-coords) :worldpos) 2)))
   ;; solve IK
-  (send *robot*
-        :inverse-kinematics-statics-optmotiongen
-        (list
-         (send (send (send *robot* :lleg :end-coords) :copy-worldcoords) :translate *lleg-trans-pos*)
-         (send (send (send *robot* :rleg :end-coords) :copy-worldcoords) :translate *rleg-trans-pos*)
-         *face*
-         *face*
-         )
-        :move-target
-        (list
-         (send *robot* :lleg :end-coords)
-         (send *robot* :rleg :end-coords)
-         (send *robot* :larm :end-coords)
-         (send *robot* :rarm :end-coords)
-         )
-        :contact-target-coords
-        (list
-         (if (equal *l_r* 0)
-             (send (send (send *robot* :lleg :end-coords) :copy-worldcoords) :translate *lleg-trans-pos*)
-           (send (send (send *robot* :rleg :end-coords) :copy-worldcoords) :translate *rleg-trans-pos*))
-         *face*
-         *face*
-         )
-        :contact-move-target
-        (list
-         (if (equal *l_r* 0)
-             (send *robot* :lleg :end-coords)
-           (send *robot* :rleg :end-coords))
-         (send *robot* :larm :end-coords)
-         (send *robot* :rarm :end-coords)
-              )
-        :contact-constraint
-        (list
-         (instance default-contact-constraint
-                   :init-from-support-polygon :support-polygon nil)
-         (instance default-contact-constraint
-                   :init-from-support-polygon :support-polygon nil)
-         (instance default-contact-constraint
-                   :init-from-support-polygon :support-polygon nil)
-         )
-        ;; :collision-avoidance-link-pair
-        ;; (list (list (send *robot* :link "RARM_LINK7") (send *robot* :link "LARM_LINK7")))
-        ;; :collision-distance-limit 200 ;; [mm]
-        ;; :posture-joint-list
-        ;; (send *robot* :joint-list)
-        ;; :posture-joint-angle-list
-        ;; (send-all (send *robot* :joint-list) :joint-angle)
-        :translation-axis (list t t t t)
-        :rotation-axis (list t t nil nil)
-        :debug-view nil
-        :root-virtual-mode :6dof
-        :optimize-torque? nil
-        :revert-if-fail nil
-        :stop 10
-        )
-
+  (emergency-touch-wall)
   ;; send angle-vector
   (send *ri* :emergencystopperservice_setEmergencyJointAngles :angles (send *robot* :angle-vector) :solved t)
+  (setq *emergency-av* (send *robot* :angle-vector))
   )
+
+(defun reset-footstep
+    ()
+  (let* ((off (* 1000 (elt (send (send (send *ri* :get-gait-generator-param) :leg_default_translate_pos) :data) 4))))
+    (send *ri* :set-foot-steps
+          (list (make-coords :coords (send *robot* :rleg :end-coords :copy-worldcoords) :name :rleg)
+                (make-coords :coords (send (send (send *robot* :rleg :end-coords :copy-worldcoords) :translate (float-vector 0 200 0)) :rotate (deg2rad 0) :y) :name :lleg)
+                (make-coords :coords (send *robot* :rleg :end-coords :copy-worldcoords) :name :rleg)
+                ))
+    ))
+
+(defun wo-touch-in-double
+    ()
+  (setq *contact-list*
+        (list (instance 2d-planar-contact :init :name "swing_leg" :fix-yaw? nil)
+              ))
+  (setq *robot-env*
+        (instance robot-environment :init :robot *robot* :contact-list *contact-list* :root-virtual-mode :6dof))
+  (setq *instant-config-task*
+        (instance instant-configuration-task :init
+                  :robot-env *robot-env*
+                  :drive-joint-list nil
+                  :only-kinematics? nil
+                  :kin-target-coords-list
+                  (list
+                   (if (equal *emergency-l_r* 0)
+                       (send (send *robot* :lleg :end-coords) :copy-worldcoords)
+                     (send *robot-env* :contact "swing_leg" :contact-coords))
+                   (if (equal *emergency-l_r* 0)
+                       (send *robot-env* :contact "swing_leg" :contact-coords)
+                     (send (send *robot* :rleg :end-coords) :copy-worldcoords))
+                   (send (send *robot* :larm :end-coords) :copy-worldcoords)
+                   (send (send *robot* :rarm :end-coords) :copy-worldcoords)
+                   (make-coords :pos *cog-pos*)
+                   )
+                  :kin-attention-coords-list
+                  (list
+                   (send *robot* :lleg :end-coords)
+                   (send *robot* :rleg :end-coords)
+                   (send *robot* :larm :end-coords)
+                   (send *robot* :rarm :end-coords)
+                   :cog
+                   )
+                  :kin-scale-list
+                  (list
+                   1
+                   1
+                   (list 1 1 1 0 0 0)
+                   (list 1 1 1 0 0 0)
+                   (list 1 1 0 0 0 0)
+                   )
+                  :contact-target-coords-list
+                  (list
+                   (if (equal *emergency-l_r* 0)
+                       (send (send *robot* :lleg :end-coords) :copy-worldcoords)
+                     (send *robot-env* :contact "swing_leg" :contact-coords))
+                   (if (equal *emergency-l_r* 0)
+                       (send *robot-env* :contact "swing_leg" :contact-coords)
+                     (send (send *robot* :rleg :end-coords) :copy-worldcoords))
+                   )
+                  :contact-attention-coords-list
+                  (list
+                   (send *robot* :lleg :end-coords)
+                   (send *robot* :rleg :end-coords)
+                   )
+                  :contact-constraint-list
+                  (list
+                   (instance default-contact-constraint
+                             :init-from-support-polygon :support-polygon nil)
+                   (instance default-contact-constraint
+                             :init-from-support-polygon :support-polygon nil)
+                   )
+                  ))
+  (setq *sqp-opt*
+        (instance sqp-optimization :init
+                  :config-task *instant-config-task*
+                  ))
+  (send *sqp-opt* :optimize :loop-num 50)
+  (send *robot-env* :dissoc-root-virtual)
+  )
+
+(defun w-touch-in-tri
+    ()
+  (setq *contact-list*
+        (list (instance 2d-planar-contact :init :name "rleg" :fix-yaw? nil)
+              ))
+  (setq *robot-env*
+        (instance robot-environment :init :robot *robot* :contact-list *contact-list* :root-virtual-mode :6dof))
+  (setq *instant-config-task*
+        (instance instant-configuration-task :init
+                  :robot-env *robot-env*
+                  :drive-joint-list nil
+                  :only-kinematics? nil
+                  :kin-target-coords-list
+                  (list
+                   (send (send *robot* :lleg :end-coords) :copy-worldcoords)
+                   (send (send *robot* :rleg :end-coords) :copy-worldcoords)
+                   (send (send *robot* :larm :end-coords) :copy-worldcoords)
+                   (send (send *robot* :rarm :end-coords) :copy-worldcoords)
+                   (make-coords :pos *cog-pos*)
+                   )
+                  :kin-attention-coords-list
+                  (list
+                   (send *robot* :lleg :end-coords)
+                   (send *robot* :rleg :end-coords)
+                   (send *robot* :larm :end-coords)
+                   (send *robot* :rarm :end-coords)
+                   :cog
+                   )
+                  :kin-scale-list
+                  (list
+                   1
+                   1
+                   (list 1 1 1 0 0 0)
+                   (list 1 1 1 0 0 0)
+                   (list 1 1 0 0 0 0)
+                   )
+                  :contact-target-coords-list
+                  (list
+                   (send (send *robot* (if (equal *emergency-l_r* 0) :lleg :rleg) :end-coords) :copy-worldcoords)
+                   (send (send *robot* :larm :end-coords) :copy-worldcoords)
+                   (send (send *robot* :rarm :end-coords) :copy-worldcoords)
+                   )
+                  :contact-attention-coords-list
+                  (list
+                   (if (equal *emergency-l_r* 0)
+                       (send *robot* :lleg :end-coords)
+                     (send *robot* :rleg :end-coords))
+                   (send *robot* :larm :end-coords)
+                   (send *robot* :rarm :end-coords)
+                   )
+                  :contact-constraint-list
+                  (list
+                   (instance default-contact-constraint
+                             :init-from-support-polygon :support-polygon nil)
+                   (instance default-contact-constraint
+                             :init-from-support-polygon :support-polygon nil)
+                   (instance default-contact-constraint
+                             :init-from-support-polygon :support-polygon nil)
+                   )
+                  ))
+  (setq *sqp-opt*
+        (instance sqp-optimization :init
+                  :config-task *instant-config-task*
+                  ))
+  (send *sqp-opt* :optimize :loop-num 50)
+  (send *robot-env* :dissoc-root-virtual)
+  )
+
+(defun w-touch-in-tri-swing
+    ()
+  (setq *contact-list*
+        (list (instance 2d-planar-contact :init :name "rleg" :fix-yaw? nil)
+              ))
+  (setq *robot-env*
+        (instance robot-environment :init :robot *robot* :contact-list *contact-list* :root-virtual-mode :6dof))
+  (setq *instant-config-task*
+        (instance instant-configuration-task :init
+                  :robot-env *robot-env*
+                  :drive-joint-list nil
+                  :only-kinematics? nil
+                  :kin-target-coords-list
+                  (list
+                   (send (send (send *robot* :lleg :end-coords) :copy-worldcoords) :translate *lleg-trans-height*)
+                   (send (send (send *robot* :rleg :end-coords) :copy-worldcoords) :translate *rleg-trans-height*)
+                   (send (send *robot* :larm :end-coords) :copy-worldcoords)
+                   (send (send *robot* :rarm :end-coords) :copy-worldcoords)
+                   (make-coords :pos *cog-pos*)
+                   )
+                  :kin-attention-coords-list
+                  (list
+                   (send *robot* :lleg :end-coords)
+                   (send *robot* :rleg :end-coords)
+                   (send *robot* :larm :end-coords)
+                   (send *robot* :rarm :end-coords)
+                   :cog
+                   )
+                  :kin-scale-list
+                  (list
+                   1
+                   1
+                   (list 1 1 1 0 0 0)
+                   (list 1 1 1 0 0 0)
+                   (list 1 1 0 0 0 0)
+                   )
+                  :contact-target-coords-list
+                  (list
+                   (send (send *robot* (if (equal *emergency-l_r* 0) :lleg :rleg) :end-coords) :copy-worldcoords)
+                   (send (send *robot* :larm :end-coords) :copy-worldcoords)
+                   (send (send *robot* :rarm :end-coords) :copy-worldcoords)
+                   )
+                  :contact-attention-coords-list
+                  (list
+                   (if (equal *emergency-l_r* 0)
+                       (send *robot* :lleg :end-coords)
+                     (send *robot* :rleg :end-coords))
+                   (send *robot* :larm :end-coords)
+                   (send *robot* :rarm :end-coords)
+                   )
+                  :contact-constraint-list
+                  (list
+                   (instance default-contact-constraint
+                             :init-from-support-polygon :support-polygon nil)
+                   (instance default-contact-constraint
+                             :init-from-support-polygon :support-polygon nil)
+                   (instance default-contact-constraint
+                             :init-from-support-polygon :support-polygon nil)
+                   )
+                  ))
+  (setq *sqp-opt*
+        (instance sqp-optimization :init
+                  :config-task *instant-config-task*
+                  ))
+  (send *sqp-opt* :optimize :loop-num 50)
+  (send *robot-env* :dissoc-root-virtual)
+  )
+
+(defun wo-touch-manip
+    ()
+  (setq *contact-list*
+        (list (instance 2d-planar-contact :init :name "rleg" :fix-yaw? nil)
+              ))
+  (setq *robot-env*
+        (instance robot-environment :init :robot *robot* :contact-list *contact-list* :root-virtual-mode :6dof))
+  (setq *instant-config-task*
+        (instance instant-configuration-task :init
+                  :robot-env *robot-env*
+                  :drive-joint-list nil
+                  :only-kinematics? nil
+                  :kin-target-coords-list
+                  (list
+                   (send lleg-coords :copy-worldcoords)
+                   (send rleg-coords :copy-worldcoords)
+                   (send (send *robot* :larm :end-coords) :copy-worldcoords)
+                   (send (send *robot* :rarm :end-coords) :copy-worldcoords)
+                   (make-coords :pos (float-vector 0 0 0))
+                   )
+                  :kin-attention-coords-list
+                  (list
+                   (send *robot* :lleg :end-coords)
+                   (send *robot* :rleg :end-coords)
+                   (send *robot* :larm :end-coords)
+                   (send *robot* :rarm :end-coords)
+                   :cog
+                   )
+                  :kin-scale-list
+                  (list
+                   1
+                   1
+                   (list 1 1 1 0 0 0)
+                   (list 1 1 1 0 0 0)
+                   (list 1 1 0 0 0 0)
+                   )
+                  :contact-target-coords-list
+                  (list
+                   (send lleg-coords :copy-worldcoords)
+                   (send rleg-coords :copy-worldcoords)
+                   )
+                  :contact-attention-coords-list
+                  (list
+                   (send *robot* :lleg :end-coords)
+                   (send *robot* :rleg :end-coords)
+                   )
+                  :contact-constraint-list
+                  (list
+                   (instance default-contact-constraint
+                             :init-from-support-polygon :support-polygon nil)
+                   (instance default-contact-constraint
+                             :init-from-support-polygon :support-polygon nil)
+                   )
+                  ))
+  (setq *sqp-opt*
+        (instance sqp-optimization :init
+                  :config-task *instant-config-task*
+                  ))
+  (send *sqp-opt* :optimize :loop-num 50)
+  (send *robot-env* :dissoc-root-virtual)
+  )
+
+(defun release-robot
+    ()
+  (let* ((rleg-pos)
+         (lleg-pos))
+    (send *robot* :angle-vector *emergency-av*)
+    (send *robot* :fix-leg-to-coords (make-coords) (if (equal *emergency-l_r* 0) :lleg :rleg))
+    (send *ri* :angle-vector *emergency-av* 1000)
+    (send *ri* :wait-interpolation)
+    (send *ri* :emergency-release-motion)
+    (send *ri* :autobalancerservice_releaseemergencystop)
+    (setq *cog-pos* (send *robot* :centroid))
+    (setq *cog-pos* (float-vector (elt *cog-pos* 0) (+ (elt *cog-pos* 1) (if (equal *emergency-l_r* 0) -100 100)) 0))
+    (wo-touch-in-double)
+    (setq *av3* (send *robot* :angle-vector))
+    (send *robot* :fix-leg-to-coords (make-coords))
+    (setq *cog-pos* (send *robot* :centroid))
+    (setq *cog-pos* (float-vector (elt *cog-pos* 0) (elt *cog-pos* 1) 0))
+    (setq rleg-coords (send (send *robot* :rleg :end-coords) :copy-worldcoords))
+    (setq lleg-coords (send (send *robot* :lleg :end-coords) :copy-worldcoords))
+    (setq *rleg-trans-height* #f(0 0 0))
+    (setq *lleg-trans-height* #f(0 0 0))
+    (if (equal *emergency-l_r* 0)
+        (setq *rleg-trans-height* #f(0 0 30))
+      (setq *lleg-trans-height* #f(0 0 30)))
+    (w-touch-in-tri)
+    (setq *av2* (send *robot* :angle-vector))
+    (send *robot* :angle-vector *av3*)
+    (send *robot* :fix-leg-to-coords (make-coords))
+    (w-touch-in-tri-swing)
+    (setq *av1* (send *robot* :angle-vector))
+    (send *robot* :reset-manip-pose)
+    (send *robot* :fix-leg-to-coords (make-coords))
+    (wo-touch-manip)
+    (setq *av4* (send *robot* :angle-vector))
+    (send *ri* :angle-vector-sequence (list *av1* *av2* *av3* *av4*) (list 5000 1000 5000 5000))
+    (send *ri* :go-stop)
+    (send *ri* :wait-interpolation)
+    (send *ri* :start-auto-balancer)
+    (send *ri* :autobalancerservice_startstabilizer)
+    (reset-footstep)
+    ))
 
 (defun start-touch-wall
     ()
@@ -186,6 +525,13 @@
    (when (and (equal (send *ri* :emergency-mode) 2) (not *is-stopping*))
      (move-robot)
      (setq *is-stopping* t)
+     (setq *emergency-face* *face*)
+     (setq *emergency-board* *board*)
+     (setq *emergency-l_r* *l_r*)
+     )
+   (when (and *is-stopping* (equal (send *ri* :get-auto-balancer-controller-mode) :mode_idle))
+     (objects (list *robot* *emergency-board*))
+     (release-robot)
      )
    (unless *is-stopping* (objects (list *robot* *board*)))
    (ros::spin-once))
