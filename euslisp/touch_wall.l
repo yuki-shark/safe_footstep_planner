@@ -68,7 +68,7 @@
       (setq *face* (elt (send *board* :faces) 1))
       (send *face* :put :margin 20) ;; [mm]
       (send *face* :put :normal-move-target-axis :z)
-      (send *face* :put :normal-tolerance 10.0)
+      (send *face* :put :normal-tolerance 60.0)
       )))
 
 (defun setup-wall
@@ -77,6 +77,14 @@
   (objects (list *robot* *board*))
   (send *robot* :rarm :collar-y :max-angle 30)
   (send *robot* :larm :collar-y :min-angle -30)
+  (send *robot* :put :larm-contact-coords
+        (make-cascoords :parent (send (send *robot* :larm :end-coords) :parent)
+                        :coords (send (send (send *robot* :larm :end-coords) :copy-worldcoords) :rotate -pi/2 :y)))
+  (send *robot* :put :rarm-contact-coords
+        (make-cascoords :parent (send (send *robot* :rarm :end-coords) :parent)
+                        :coords (send (send (send *robot* :rarm :end-coords) :copy-worldcoords) :rotate -pi/2 :y)))
+  (create-support-polygon *robot* (send (send *robot* :rleg :end-coords) :parent))
+  (create-support-polygon *robot* (send (send *robot* :lleg :end-coords) :parent))
   (setq *landing-pos* (float-vector 0 0 0)) ;; dummy
   (setq *l_r* 0) ;; dummy
   )
@@ -106,8 +114,8 @@
                   (list
                    (send *robot* :lleg :end-coords)
                    (send *robot* :rleg :end-coords)
-                   (send *robot* :larm :end-coords)
-                   (send *robot* :rarm :end-coords)
+                   (send *robot* :get :larm-contact-coords)
+                   (send *robot* :get :rarm-contact-coords)
                    :cog
                    )
                   :kin-scale-list
@@ -131,13 +139,16 @@
                    (if (equal *l_r* 0)
                        (send *robot* :lleg :end-coords)
                      (send *robot* :rleg :end-coords))
-                   (send *robot* :larm :end-coords)
-                   (send *robot* :rarm :end-coords)
+                   (send *robot* :get :larm-contact-coords)
+                   (send *robot* :get :rarm-contact-coords)
                    )
                   :contact-constraint-list
                   (list
                    (instance default-contact-constraint
-                             :init-from-support-polygon :support-polygon nil)
+                             :init-from-support-polygon
+                             :support-polygon (send (send (send *robot* (if (equal *l_r* 0) :lleg :rleg) :end-coords) :parent) :get :support-polygon)
+                             :support-polygon-coords (send (send *robot* (if (equal *l_r* 0) :lleg :rleg) :end-coords) :worldcoords)
+                             )
                    (instance default-contact-constraint
                              :init-from-support-polygon :support-polygon nil)
                    (instance default-contact-constraint
@@ -234,8 +245,8 @@
                   (list
                    (send *robot* :lleg :end-coords)
                    (send *robot* :rleg :end-coords)
-                   (send *robot* :larm :end-coords)
-                   (send *robot* :rarm :end-coords)
+                   (send *robot* :get :larm-contact-coords)
+                   (send *robot* :get :rarm-contact-coords)
                    :cog
                    )
                   :kin-scale-list
@@ -263,9 +274,15 @@
                   :contact-constraint-list
                   (list
                    (instance default-contact-constraint
-                             :init-from-support-polygon :support-polygon nil)
+                             :init-from-support-polygon
+                             :support-polygon (send (send (send *robot* :lleg :end-coords) :parent) :get :support-polygon)
+                             :support-polygon-coords (send (send *robot* :lleg :end-coords) :worldcoords)
+                             )
                    (instance default-contact-constraint
-                             :init-from-support-polygon :support-polygon nil)
+                             :init-from-support-polygon
+                             :support-polygon (send (send (send *robot* :rleg :end-coords) :parent) :get :support-polygon)
+                             :support-polygon-coords (send (send *robot* :rleg :end-coords) :worldcoords)
+                             )
                    )
                   ))
   (setq *sqp-opt*
@@ -292,16 +309,16 @@
                   (list
                    (send (send *robot* :lleg :end-coords) :copy-worldcoords)
                    (send (send *robot* :rleg :end-coords) :copy-worldcoords)
-                   (send (send *robot* :larm :end-coords) :copy-worldcoords)
-                   (send (send *robot* :rarm :end-coords) :copy-worldcoords)
+                   (send (send *robot* :get :larm-contact-coords) :copy-worldcoords)
+                   (send (send *robot* :get :rarm-contact-coords) :copy-worldcoords)
                    (make-coords :pos *cog-pos*)
                    )
                   :kin-attention-coords-list
                   (list
                    (send *robot* :lleg :end-coords)
                    (send *robot* :rleg :end-coords)
-                   (send *robot* :larm :end-coords)
-                   (send *robot* :rarm :end-coords)
+                   (send *robot* :get :larm-contact-coords)
+                   (send *robot* :get :rarm-contact-coords)
                    :cog
                    )
                   :kin-scale-list
@@ -315,21 +332,24 @@
                   :contact-target-coords-list
                   (list
                    (send (send *robot* (if (equal *emergency-l_r* 0) :lleg :rleg) :end-coords) :copy-worldcoords)
-                   (send (send *robot* :larm :end-coords) :copy-worldcoords)
-                   (send (send *robot* :rarm :end-coords) :copy-worldcoords)
+                   (send (send *robot* :get :larm-contact-coords) :copy-worldcoords)
+                   (send (send *robot* :get :rarm-contact-coords) :copy-worldcoords)
                    )
                   :contact-attention-coords-list
                   (list
                    (if (equal *emergency-l_r* 0)
                        (send *robot* :lleg :end-coords)
                      (send *robot* :rleg :end-coords))
-                   (send *robot* :larm :end-coords)
-                   (send *robot* :rarm :end-coords)
+                   (send *robot* :get :larm-contact-coords)
+                   (send *robot* :get :rarm-contact-coords)
                    )
                   :contact-constraint-list
                   (list
                    (instance default-contact-constraint
-                             :init-from-support-polygon :support-polygon nil)
+                             :init-from-support-polygon
+                             :support-polygon (send (send (send *robot* (if (equal *l_r* 0) :lleg :rleg) :end-coords) :parent) :get :support-polygon)
+                             :support-polygon-coords (send (send *robot* (if (equal *l_r* 0) :lleg :rleg) :end-coords) :worldcoords)
+                             )
                    (instance default-contact-constraint
                              :init-from-support-polygon :support-polygon nil)
                    (instance default-contact-constraint
@@ -360,16 +380,16 @@
                   (list
                    (send (send (send *robot* :lleg :end-coords) :copy-worldcoords) :translate *lleg-trans-height*)
                    (send (send (send *robot* :rleg :end-coords) :copy-worldcoords) :translate *rleg-trans-height*)
-                   (send (send *robot* :larm :end-coords) :copy-worldcoords)
-                   (send (send *robot* :rarm :end-coords) :copy-worldcoords)
+                   (send (send *robot* :get :larm-contact-coords) :copy-worldcoords)
+                   (send (send *robot* :get :rarm-contact-coords) :copy-worldcoords)
                    (make-coords :pos *cog-pos*)
                    )
                   :kin-attention-coords-list
                   (list
                    (send *robot* :lleg :end-coords)
                    (send *robot* :rleg :end-coords)
-                   (send *robot* :larm :end-coords)
-                   (send *robot* :rarm :end-coords)
+                   (send *robot* :get :larm-contact-coords)
+                   (send *robot* :get :rarm-contact-coords)
                    :cog
                    )
                   :kin-scale-list
@@ -383,21 +403,24 @@
                   :contact-target-coords-list
                   (list
                    (send (send *robot* (if (equal *emergency-l_r* 0) :lleg :rleg) :end-coords) :copy-worldcoords)
-                   (send (send *robot* :larm :end-coords) :copy-worldcoords)
-                   (send (send *robot* :rarm :end-coords) :copy-worldcoords)
+                   (send (send *robot* :get :larm-contact-coords) :copy-worldcoords)
+                   (send (send *robot* :get :rarm-contact-coords) :copy-worldcoords)
                    )
                   :contact-attention-coords-list
                   (list
                    (if (equal *emergency-l_r* 0)
                        (send *robot* :lleg :end-coords)
                      (send *robot* :rleg :end-coords))
-                   (send *robot* :larm :end-coords)
-                   (send *robot* :rarm :end-coords)
+                   (send *robot* :get :larm-contact-coords)
+                   (send *robot* :get :rarm-contact-coords)
                    )
                   :contact-constraint-list
                   (list
                    (instance default-contact-constraint
-                             :init-from-support-polygon :support-polygon nil)
+                             :init-from-support-polygon
+                             :support-polygon (send (send (send *robot* (if (equal *l_r* 0) :lleg :rleg) :end-coords) :parent) :get :support-polygon)
+                             :support-polygon-coords (send (send *robot* (if (equal *l_r* 0) :lleg :rleg) :end-coords) :worldcoords)
+                             )
                    (instance default-contact-constraint
                              :init-from-support-polygon :support-polygon nil)
                    (instance default-contact-constraint
@@ -428,16 +451,16 @@
                   (list
                    (send lleg-coords :copy-worldcoords)
                    (send rleg-coords :copy-worldcoords)
-                   (send (send *robot* :larm :end-coords) :copy-worldcoords)
-                   (send (send *robot* :rarm :end-coords) :copy-worldcoords)
+                   (send (send *robot* :get :larm-contact-coords) :copy-worldcoords)
+                   (send (send *robot* :get :rarm-contact-coords) :copy-worldcoords)
                    (make-coords :pos (float-vector 0 0 0))
                    )
                   :kin-attention-coords-list
                   (list
                    (send *robot* :lleg :end-coords)
                    (send *robot* :rleg :end-coords)
-                   (send *robot* :larm :end-coords)
-                   (send *robot* :rarm :end-coords)
+                   (send *robot* :get :larm-contact-coords)
+                   (send *robot* :get :rarm-contact-coords)
                    :cog
                    )
                   :kin-scale-list
@@ -461,9 +484,15 @@
                   :contact-constraint-list
                   (list
                    (instance default-contact-constraint
-                             :init-from-support-polygon :support-polygon nil)
+                             :init-from-support-polygon
+                             :support-polygon (send (send (send *robot* :lleg :end-coords) :parent) :get :support-polygon)
+                             :support-polygon-coords (send (send *robot* :lleg :end-coords) :worldcoords)
+                             )
                    (instance default-contact-constraint
-                             :init-from-support-polygon :support-polygon nil)
+                             :init-from-support-polygon
+                             :support-polygon (send (send (send *robot* :rleg :end-coords) :parent) :get :support-polygon)
+                             :support-polygon-coords (send (send *robot* :rleg :end-coords) :worldcoords)
+                             )
                    )
                   ))
   (setq *sqp-opt*
