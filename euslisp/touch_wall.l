@@ -2,6 +2,7 @@
 
 (ros::roseus-add-msgs "jsk_recognition_msgs")
 (ros::roseus-add-msgs "safe_footstep_planner")
+(ros::roseus-add-msgs "hrpsys_ros_bridge")
 
 (require "package://hrpsys_ros_bridge_tutorials/euslisp/jaxon_red-interface.l")
 (require "package://eus_qp/optmotiongen/euslisp/inverse-kinematics-statics-wrapper.l")
@@ -18,6 +19,13 @@
     (msg)
   (setq *landing-pos* (scale 1e3 (float-vector (send msg :x) (send msg :y) (send msg :z))))
   (setq *l_r* (send msg :l_r))
+  )
+
+;; support foot relative
+(defun end-cog-callback
+    (msg)
+  (setq *end-cog-pos* (scale 1e3 (float-vector (send msg :x) (send msg :y) (send msg :z))))
+  (setq *end-cog-vel* (scale 1e3 (float-vector (send msg :vx) (send msg :vy) (send msg :vz))))
   )
 
 ;; BODY relative
@@ -124,7 +132,7 @@
                    1
                    (list 1 1 1 0 0 0)
                    (list 1 1 1 0 0 0)
-                   (list 1 1 0 0 0 0)
+                   (list 1 0 0 0 0 0) ;; only x
                    )
                   :contact-target-coords-list
                   (list
@@ -158,11 +166,61 @@
   (setq *sqp-opt*
         (instance sqp-optimization :init
                   :config-task *instant-config-task*
-                  :no-visualize? t
-                  :no-print? t
+                  ;; :no-visualize? t
+                  ;; :no-print? t
                   ))
   (send *sqp-opt* :optimize :loop-num 10)
   (send *robot-env* :dissoc-root-virtual)
+  )
+
+(defun calc-cog-pos
+    (calc-tm) ;; ik calculattion time + touch wall motion time
+  (let* ((next-sup-leg-pos)
+         (next-swg-leg-pos)
+         (end-cog-pos) ;; world (root-link) frame
+         (omega (sqrt (/ 9.80665 (elt *end-cog-pos* 2))))
+         )
+    (setq next-sup-leg-pos
+          (send
+           (if (equal *l_r* 0)
+               (send (send (send *robot* :lleg :end-coords) :copy-worldcoords) :translate *lleg-trans-pos*)
+             (send (send (send *robot* :rleg :end-coords) :copy-worldcoords) :translate *rleg-trans-pos*))
+           :worldpos))
+    (setq next-swg-leg-pos
+          (send
+           (if (equal *l_r* 0)
+               (send (send (send *robot* :rleg :end-coords) :copy-worldcoords) :translate *rleg-trans-pos*)
+             (send (send (send *robot* :lleg :end-coords) :copy-worldcoords) :translate *lleg-trans-pos*))
+           :worldpos))
+    (setq end-cog-pos (v+ *end-cog-pos* next-swg-leg-pos))
+    (setq *cog-pos*
+          (v+
+           (v+
+            (scale (cosh (* omega calc-tm)) (v- end-cog-pos next-sup-leg-pos))
+            (scale (/ (sinh (* omega calc-tm)) omega) *end-cog-vel*))
+           next-sup-leg-pos))
+
+    ;; debug
+    ;; (setq *sup* next-sup-leg-pos)
+    ;; (setq *swg* next-swg-leg-pos)
+    ;; (setq *omega* omega)
+    ;; (setq *vel* *end-cog-vel*)
+    ;; (setq *cog* end-cog-pos)
+    ;; (setq *cog-orig* *end-cog-pos*)
+    ;; (setq *lleg-trans* *lleg-trans-pos*)
+    ;; (setq *rleg-trans* *rleg-trans-pos*)
+    ;; (setq *lr* *l_r*)
+    ;; (setq *lleg* (send (send *robot* :lleg :end-coords) :copy-worldcoords))
+    ;; (setq *rleg* (send (send *robot* :rleg :end-coords) :copy-worldcoords))
+    ;; (setq *cog-pos*
+    ;;       (v+
+    ;;        (v+
+    ;;         (scale (cosh (* *omega* calc-tm)) (v- *cog* *sup*))
+    ;;         (scale (/ (sinh (* *omega* calc-tm)) *omega*) *vel*))
+    ;;        *sup*))
+
+    (setq *emergency-cog* *cog-pos*)
+    )
   )
 
 (defun move-robot
@@ -199,7 +257,8 @@
              ))
       )
     )
-  (setq *cog-pos* (float-vector 200 0 (elt (send (send *robot* :rleg :end-coords) :worldpos) 2)))
+  (calc-cog-pos 1.4)
+  ;; (setq *cog-pos* (float-vector 200 0 (elt (send (send *robot* :rleg :end-coords) :worldpos) 2)))
   ;; solve IK
   (emergency-touch-wall)
   ;; send angle-vector
@@ -507,6 +566,7 @@
     ()
   (let* ((rleg-pos)
          (lleg-pos))
+    (send *ri* :go-stop)
     (send *robot* :angle-vector *emergency-av*)
     (send *robot* :fix-leg-to-coords (make-coords) (if (equal *emergency-l_r* 0) :lleg :rleg))
     (send *ri* :angle-vector *emergency-av* 1000)
@@ -538,7 +598,6 @@
     (wo-touch-manip)
     (setq *av4* (send *robot* :angle-vector))
     (send *ri* :angle-vector-sequence (list *av1* *av2* *av3* *av4*) (list 5000 1000 5000 5000))
-    (send *ri* :go-stop)
     (send *ri* :wait-interpolation)
     (send *ri* :start-auto-balancer)
     (send *ri* :autobalancerservice_startstabilizer)
@@ -571,6 +630,7 @@
 ;; (ros::subscribe "/valve_recognition/cluster_decomposer/boxes" jsk_recognition_msgs::BoundingBoxArray #'wall-callback 1)
 (ros::subscribe "/valve_recognition/walls/output" jsk_recognition_msgs::BoundingBoxArray #'wall-callback 1)
 (ros::subscribe "/landing_target" safe_footstep_planner::OnlineFootStep #'target-callback 1)
+(ros::subscribe "/end_cog_state" hrpsys_ros_bridge::CogState #'end-cog-callback 1)
 (setup-wall)
 
 (format t "start controller~%")
