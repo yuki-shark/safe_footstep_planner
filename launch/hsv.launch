@@ -41,7 +41,8 @@
   <include file="$(find opencv_apps)/launch/convex_hull.launch">
     <arg name="node_name" value="left_convex_full" />
     <arg name="image"  value="/left_erode_mask_image/output" />
-    <arg name="debug_view"  value="true" />
+    <!-- <arg name="debug_view"  value="true" /> -->
+    <arg name="debug_view"  value="false" />
   </include>
 
   <!-- <include file="$(find opencv_apps)/launch/find_contours.launch"> -->
@@ -101,7 +102,29 @@
   <include file="$(find opencv_apps)/launch/convex_hull.launch">
     <arg name="node_name" value="board_convex_full" />
     <arg name="image"  value="/board_erode_mask_image2/output" />
-    <arg name="debug_view"  value="true" />
+    <arg name="debug_view"  value="false" />
   </include>
+
+  <node name="draw_contours" pkg="safe_footstep_planner" type="draw_contours" />
+
+  <node name="erode_mask_image"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_perception/ErodeMaskImage $(arg MANAGER)">
+    <remap from="~input" to="steppable_region_image" />
+    <rosparam>
+      method: 0
+      size: 3
+    </rosparam>
+  </node>
+
+  <node name="dilate_mask_image"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_perception/DilateMaskImage $(arg MANAGER)">
+    <remap from="~input" to="erode_mask_image/output" />
+    <rosparam>
+      method: 0
+      size: 3
+    </rosparam>
+  </node>
 
 </launch>
