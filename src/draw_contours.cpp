@@ -25,57 +25,86 @@ private:
   ros::NodeHandle pnh_;
   opencv_apps::ContourArrayStamped contours_;
   sensor_msgs::Image image_;
-  // sensor_msgs::CvBridge bridge_;
-  // opencv_apps::ContourArrayStamped contours_;
+  ros::Publisher img_pub_;
+  ros::Publisher msg_pub_;
+
   ros::Subscriber contours_sub_;
-  ros::Publisher image_publisher_;
-  void ContourArrayCallback(const opencv_apps::ContourArrayStamped::ConstPtr& msg);
+  ros::Subscriber board_hsv_sub_;
+
+  cv::Mat filled_convex_image_;
+  // ros::Publisher image_publisher_;
+  // void ContourArrayCallback(const opencv_apps::ContourArrayStamped::ConstPtr& msg);
+  void ImageBoardCallback(const sensor_msgs::Image::ConstPtr& msg);
   // void targetCallback(const safe_footstep_planner::OnlineFootStep::ConstPtr& msg);
 };
 
 DrawContours::DrawContours() : nh_(""), pnh_("~")
 {
-  image_publisher_ = nh_.advertise<sensor_msgs::Image>("board_image", 1);
+  img_pub_ = nh_.advertise<sensor_msgs::Image>("board_image", 1);
+  msg_pub_ = nh_.advertise<opencv_apps::ContourArrayStamped>("hulls", 1);
   // contours_sub_ = nh_.subscribe("/board_convex_full/hulls", 1, &DrawContours::ContourArrayCallback, this);
-  board_hsv_sub_ = nh_.subscribe("/board_hsv_color_filter/image", 1, &DrawContours::ContourArrayCallback, this);
+  // board_hsv_sub_ = nh_.subscribe("/board_hsv_color_filter/image", 1, &DrawContours::ContourArrayCallback, this);
+  board_hsv_sub_ = nh_.subscribe("/board_erode_mask_image2/output", 1, &DrawContours::ImageBoardCallback, this);
 }
 
-// void DrawContours::ContourArrayCallback(const opencv_apps::ContourArrayStamped::ConstPtr& msg)
-// {
-//   // contours_ = msg->contours;
-//   // cv::Mat img = cv::Mat::zeros(msg->contours.size(), CV_8UC1);
-//   cv_bridge::CvImage outimg;
-//   // // cv::drawContours(img, msg->contours, -1, 255, -1);
-//   // for (opencv_apps::Contour contour : msg->contours) {
-//   //   cv::drawContours(img, msg->contours, -1, 255, -1);
-//   // }
-
-//   cv::Mat drawing = cv::Mat::zeros(544, 1024, CV_8UC1);
-//   for (size_t i = 0; i < msg->contours.size(); i++)
-//   {
-//     cv::Scalar color = cv::Scalar(255);
-//     // cv::drawContours(drawing, msg->contours, (int)i, color, 2, 8, vector<int>(0,4), 0, cv::Point());
-//     // cv::drawContours(drawing, msg->contours, i, cv::Scalar(255, 0, 0), -1);
-//     cv::drawContours(drawing, msg->contours, (int)i, color, -1, 8, std::vector<cv::Vec4i>(), 0, cv::Point());
-//     // cv::drawContours(drawing, msg->contours, (int)i, color, -1);
-//   }
-//   outimg.header = msg->header;
-//   outimg.encoding = sensor_msgs::image_encodings::MONO8;
-//   outimg.image = drawing;
-
-//   image_publisher_.publish(outimg);
-// }
-
-void DrawContours::ContourArrayCallback(const sensor_msgs::Image::ConstPtr& msg) {
+void DrawContours::ImageBoardCallback(const sensor_msgs::Image::ConstPtr& msg) {
   cv_bridge::CvImagePtr cv_ptr;
   cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::MONO8);
 
-  int max_thresh = 255;
-  cv::Mat threshold_output;
   std::vector<std::vector<cv::Point> > contours;
   std::vector<cv::Vec4i> hierarchy;
 
-  cv::threshold(
+  cv::RNG rng(12345);
+  // cv::Mat src_gray = cv_bridge::toCvShare(msg, sensor_msgs::image_encodings::BGR8)->image;
+  cv::Mat src_gray = cv_ptr->image;
+
+  // Messages
+  opencv_apps::ContourArrayStamped contours_msg;
+  contours_msg.header = msg->header;
+
+  cv::blur(src_gray, src_gray, cv::Size(3, 3));
+
+  /// Find contours
+  cv::findContours(src_gray, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
+
+  /// Find the convex hull object for each contour
+  std::vector<std::vector<cv::Point> > hull(contours.size());
+  for (size_t i = 0; i < contours.size(); i++)
+  {
+    cv::convexHull(cv::Mat(contours[i]), hull[i], false);
+  }
+
+  // cv::Mat drawing = cv::Mat::zeros(src_gray.size(), CV_8UC3);
+  cv::Mat drawing = cv::Mat::zeros(src_gray.size(), CV_8UC1);
+  for (size_t i = 0; i < contours.size(); i++)
+  {
+    // cv::Scalar color = cv::Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
+    // cv::Scalar color = cv::Scalar(rng.uniform(0, 255));
+    cv::Scalar color = cv::Scalar(255);
+    // cv::drawContours(drawing, contours, (int)i, color, 1, 8, std::vector<cv::Vec4i>(), 0, cv::Point());
+    cv::drawContours(drawing, hull, (int)i, color, -1, 8, std::vector<cv::Vec4i>(), 0, cv::Point());
+
+    opencv_apps::Contour contour_msg;
+    // c++11 option required here
+    for (const cv::Point& j : hull[i])
+    {
+      opencv_apps::Point2D point_msg;
+      point_msg.x = j.x;
+      point_msg.y = j.y;
+      contour_msg.points.push_back(point_msg);
+    }
+    contours_msg.contours.push_back(contour_msg);
+  }
+
+  // Mat img_and;
+  // bitwise_and(img1, img2, img_and);
+
+  filled_convex_image_ = drawing;
+  sensor_msgs::Image::Ptr out_img =
+    cv_bridge::CvImage(msg->header, sensor_msgs::image_encodings::MONO8, drawing).toImageMsg();
+  img_pub_.publish(out_img);
+  msg_pub_.publish(contours_msg);
+
 }
 
 
