@@ -38,19 +38,6 @@
     </rosparam>
   </node>
 
-  <include file="$(find opencv_apps)/launch/convex_hull.launch">
-    <arg name="node_name" value="left_convex_full" />
-    <arg name="image"  value="/left_erode_mask_image/output" />
-    <!-- <arg name="debug_view"  value="true" /> -->
-    <arg name="debug_view"  value="false" />
-  </include>
-
-  <!-- <include file="$(find opencv_apps)/launch/find_contours.launch"> -->
-  <!--   <arg name="node_name" value="left_find_contours" /> -->
-  <!--   <arg name="image"  value="/left_erode_mask_image/output" /> -->
-  <!--   <arg name="debug_view"  value="true" /> -->
-  <!-- </include> -->
-
   <include file="$(find opencv_apps)/launch/hsv_color_filter.launch" >
     <arg name="node_name" value="board_hsv_color_filter" />
     <arg name="image" value="$(arg INPUT_IMAGE)" />
@@ -89,21 +76,9 @@
     <remap from="~input" to="board_dilate_mask_image/output" />
     <rosparam>
       method: 0
-      size: 8
+      size: 12
     </rosparam>
   </node>
-
-  <!-- <include file="$(find opencv_apps)/launch/find_contours.launch"> -->
-  <!--   <arg name="node_name" value="board_find_contours" /> -->
-  <!--   <arg name="image"  value="/board_erode_mask_image2/output" /> -->
-  <!--   <arg name="debug_view"  value="true" /> -->
-  <!-- </include> -->
-
-  <include file="$(find opencv_apps)/launch/convex_hull.launch">
-    <arg name="node_name" value="board_convex_full" />
-    <arg name="image"  value="/board_erode_mask_image2/output" />
-    <arg name="debug_view"  value="false" />
-  </include>
 
   <node name="draw_contours" pkg="safe_footstep_planner" type="draw_contours" />
 
@@ -113,7 +88,7 @@
     <remap from="~input" to="steppable_region_image" />
     <rosparam>
       method: 0
-      size: 3
+      size: 5
     </rosparam>
   </node>
 
@@ -126,5 +101,11 @@
       size: 3
     </rosparam>
   </node>
+
+  <include file="$(find opencv_apps)/launch/convex_hull.launch">
+    <arg name="node_name" value="convex_full" />
+    <arg name="image"  value="/dilate_mask_image/output" />
+    <arg name="debug_view"  value="true" />
+  </include>
 
 </launch>
