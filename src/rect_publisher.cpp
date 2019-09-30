@@ -19,8 +19,8 @@ private:
     ros::NodeHandle private_nh_;
     ros::Publisher rect_publisher_;
     ros::Subscriber camera_info_subscriber_;
-};
-
+}
+;
 
 MaskImage::MaskImage() : nh_(""), private_nh_("~")
 {
