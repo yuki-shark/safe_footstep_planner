@@ -1,0 +1,107 @@
+<launch>
+  <arg name="MANAGER" value="color_filter_nodelet_manager" />
+  <arg name="INPUT_IMAGE" default="/multisense_local/left/image_rect_color" />
+
+  <node name="$(arg MANAGER)"
+        pkg="nodelet" type="nodelet"
+        args="manager" />
+
+  <include file="$(find opencv_apps)/launch/hsv_color_filter.launch" >
+    <arg name="node_name" value="left_hsv_color_filter" />
+    <arg name="image" value="$(arg INPUT_IMAGE)" />
+    <arg name="h_limit_max" value="191" doc="The maximum allowed field value Hue" />
+    <arg name="h_limit_min" value="44" doc="The minimum allowed field value Hue" />
+    <arg name="s_limit_max" value="32" doc="The maximum allowed field value Saturation" />
+    <arg name="s_limit_min" value="0" doc="The minimum allowed field value Saturation" />
+    <arg name="v_limit_max" value="218" doc="The maximum allowed field value Value" />
+    <arg name="v_limit_min" value="113" doc="The minimum allowed field value Value" />
+    <arg name="debug_view" value="false" />
+  </include>
+
+  <node name="left_dilate_mask_image"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_perception/DilateMaskImage $(arg MANAGER)">
+    <remap from="~input" to="left_hsv_color_filter/image" />
+    <rosparam>
+      method: 0
+      size: 3
+    </rosparam>
+  </node>
+
+  <node name="left_erode_mask_image"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_perception/ErodeMaskImage $(arg MANAGER)">
+    <remap from="~input" to="left_dilate_mask_image/output" />
+    <rosparam>
+      method: 0
+      size: 3
+    </rosparam>
+  </node>
+
+  <include file="$(find opencv_apps)/launch/convex_hull.launch">
+    <arg name="node_name" value="left_convex_full" />
+    <arg name="image"  value="/left_erode_mask_image/output" />
+    <arg name="debug_view"  value="true" />
+  </include>
+
+  <!-- <include file="$(find opencv_apps)/launch/find_contours.launch"> -->
+  <!--   <arg name="node_name" value="left_find_contours" /> -->
+  <!--   <arg name="image"  value="/left_erode_mask_image/output" /> -->
+  <!--   <arg name="debug_view"  value="true" /> -->
+  <!-- </include> -->
+
+  <include file="$(find opencv_apps)/launch/hsv_color_filter.launch" >
+    <arg name="node_name" value="board_hsv_color_filter" />
+    <arg name="image" value="$(arg INPUT_IMAGE)" />
+    <arg name="h_limit_max" value="62" doc="The maximum allowed field value Hue" />
+    <arg name="h_limit_min" value="34" doc="The minimum allowed field value Hue" />
+    <arg name="s_limit_max" value="126" doc="The maximum allowed field value Saturation" />
+    <arg name="s_limit_min" value="26" doc="The minimum allowed field value Saturation" />
+    <arg name="v_limit_max" value="256" doc="The maximum allowed field value Value" />
+    <arg name="v_limit_min" value="157" doc="The minimum allowed field value Value" />
+    <arg name="debug_view" value="false" />
+  </include>
+
+  <node name="board_erode_mask_image"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_perception/ErodeMaskImage $(arg MANAGER)">
+    <remap from="~input" to="board_hsv_color_filter/image" />
+    <rosparam>
+      method: 0
+      size: 2
+    </rosparam>
+  </node>
+
+  <node name="board_dilate_mask_image"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_perception/DilateMaskImage $(arg MANAGER)">
+    <remap from="~input" to="board_erode_mask_image/output" />
+    <rosparam>
+      method: 0
+      size: 10
+    </rosparam>
+  </node>
+
+  <node name="board_erode_mask_image2"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_perception/ErodeMaskImage $(arg MANAGER)">
+    <remap from="~input" to="board_dilate_mask_image/output" />
+    <rosparam>
+      method: 0
+      size: 8
+    </rosparam>
+  </node>
+
+  <!-- <include file="$(find opencv_apps)/launch/find_contours.launch"> -->
+  <!--   <arg name="node_name" value="board_find_contours" /> -->
+  <!--   <arg name="image"  value="/board_erode_mask_image2/output" /> -->
+  <!--   <arg name="debug_view"  value="true" /> -->
+  <!-- </include> -->
+
+  <include file="$(find opencv_apps)/launch/convex_hull.launch">
+    <arg name="node_name" value="board_convex_full" />
+    <arg name="image"  value="/board_erode_mask_image2/output" />
+    <arg name="debug_view"  value="true" />
+  </include>
+
+</launch>
