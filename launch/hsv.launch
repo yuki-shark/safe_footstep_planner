@@ -9,12 +9,20 @@
   <include file="$(find opencv_apps)/launch/hsv_color_filter.launch" >
     <arg name="node_name" value="left_hsv_color_filter" />
     <arg name="image" value="$(arg INPUT_IMAGE)" />
+    <!-- real env -->
+    <!-- <arg name="h_limit_max" value="191" doc="The maximum allowed field value Hue" /> -->
+    <!-- <arg name="h_limit_min" value="44" doc="The minimum allowed field value Hue" /> -->
+    <!-- <arg name="s_limit_max" value="32" doc="The maximum allowed field value Saturation" /> -->
+    <!-- <arg name="s_limit_min" value="0" doc="The minimum allowed field value Saturation" /> -->
+    <!-- <arg name="v_limit_max" value="218" doc="The maximum allowed field value Value" /> -->
+    <!-- <arg name="v_limit_min" value="113" doc="The minimum allowed field value Value" /> -->
+    <!-- choreonoid -->
     <arg name="h_limit_max" value="191" doc="The maximum allowed field value Hue" />
-    <arg name="h_limit_min" value="44" doc="The minimum allowed field value Hue" />
-    <arg name="s_limit_max" value="32" doc="The maximum allowed field value Saturation" />
+    <arg name="h_limit_min" value="0" doc="The minimum allowed field value Hue" />
+    <arg name="s_limit_max" value="120" doc="The maximum allowed field value Saturation" />
     <arg name="s_limit_min" value="0" doc="The minimum allowed field value Saturation" />
-    <arg name="v_limit_max" value="218" doc="The maximum allowed field value Value" />
-    <arg name="v_limit_min" value="113" doc="The minimum allowed field value Value" />
+    <arg name="v_limit_max" value="256" doc="The maximum allowed field value Value" />
+    <arg name="v_limit_min" value="0" doc="The minimum allowed field value Value" />
     <arg name="debug_view" value="false" />
   </include>
 
@@ -41,12 +49,20 @@
   <include file="$(find opencv_apps)/launch/hsv_color_filter.launch" >
     <arg name="node_name" value="board_hsv_color_filter" />
     <arg name="image" value="$(arg INPUT_IMAGE)" />
+    <!-- real env -->
+    <!-- <arg name="h_limit_max" value="62" doc="The maximum allowed field value Hue" /> -->
+    <!-- <arg name="h_limit_min" value="34" doc="The minimum allowed field value Hue" /> -->
+    <!-- <arg name="s_limit_max" value="126" doc="The maximum allowed field value Saturation" /> -->
+    <!-- <arg name="s_limit_min" value="26" doc="The minimum allowed field value Saturation" /> -->
+    <!-- <arg name="v_limit_max" value="256" doc="The maximum allowed field value Value" /> -->
+    <!-- <arg name="v_limit_min" value="157" doc="The minimum allowed field value Value" /> -->
+    <!-- choreonoid -->
     <arg name="h_limit_max" value="62" doc="The maximum allowed field value Hue" />
-    <arg name="h_limit_min" value="34" doc="The minimum allowed field value Hue" />
-    <arg name="s_limit_max" value="126" doc="The maximum allowed field value Saturation" />
-    <arg name="s_limit_min" value="26" doc="The minimum allowed field value Saturation" />
+    <arg name="h_limit_min" value="0" doc="The minimum allowed field value Hue" />
+    <arg name="s_limit_max" value="256" doc="The maximum allowed field value Saturation" />
+    <arg name="s_limit_min" value="140" doc="The minimum allowed field value Saturation" />
     <arg name="v_limit_max" value="256" doc="The maximum allowed field value Value" />
-    <arg name="v_limit_min" value="157" doc="The minimum allowed field value Value" />
+    <arg name="v_limit_min" value="0" doc="The minimum allowed field value Value" />
     <arg name="debug_view" value="false" />
   </include>
 
