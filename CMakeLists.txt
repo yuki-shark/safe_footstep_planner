@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   jsk_recognition_msgs
   cv_bridge
   image_transport
+  image_geometry
   message_generation
   tf
   roseus
@@ -62,3 +63,6 @@ target_link_libraries(steppable_region_publisher ${catkin_LIBRARIES})
 
 add_executable(draw_contours src/draw_contours.cpp)
 target_link_libraries(draw_contours ${catkin_LIBRARIES})
+
+add_executable(contours_converter src/contours_converter.cpp)
+target_link_libraries(contours_converter ${catkin_LIBRARIES})
