@@ -167,7 +167,7 @@
         (instance sqp-optimization :init
                   :config-task *instant-config-task*
                   ;; :no-visualize? t
-                  ;; :no-print? t
+                  :no-print? t
                   ))
   (send *sqp-opt* :optimize :loop-num 10)
   (send *robot-env* :dissoc-root-virtual)
@@ -621,7 +621,15 @@
      (objects (list *robot* *emergency-board*))
      (release-robot)
      )
-   (unless *is-stopping* (objects (list *robot* *board*)))
+   (unless *is-stopping*
+     (progn
+       (let* ((root-pos))
+         (send *robot* :reset-pose)
+         (send *robot* :fix-leg-to-coords (make-coords))
+         (setq root-pos (scale -1 (send (send (send *robot* :torso-root-link) :copy-worldcoords) :pos)))
+         (send *robot* :newcoords (make-coords :pos root-pos))
+         )
+       (objects (list *robot* *board*))))
    (ros::spin-once))
   )
 
