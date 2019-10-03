@@ -14,7 +14,7 @@
 #include <safe_footstep_planner/OnlineFootStep.h>
 #include <safe_footstep_planner/SteppableRegion.h>
 #include <safe_footstep_planner/PolygonArray.h>
-#include "safe_footstep_util.h"
+#include <safe_footstep_planner/safe_footstep_util.h>
 
 class SteppableRegionPublisher
 {
@@ -117,6 +117,12 @@ void SteppableRegionPublisher::meshCallback(const safe_footstep_planner::Polygon
   // meshes[3].push_back(Eigen::Vector3f(1000, 700, 0));
   // meshes[3].push_back(Eigen::Vector3f(650, 850, 0));
   // meshes[3].push_back(Eigen::Vector3f(400, 800, 0));
+  // meshes[0].push_back(Eigen::Vector3f(0, 0, 0));
+  // meshes[0].push_back(Eigen::Vector3f(500, 0, 0));
+  // meshes[0].push_back(Eigen::Vector3f(700, 500, 0));
+  // meshes[0].push_back(Eigen::Vector3f(1000, 700, 0));
+  // meshes[0].push_back(Eigen::Vector3f(650, 850, 0));
+  // meshes[0].push_back(Eigen::Vector3f(400, 800, 0));
 
   // combine meshes
   for (size_t i = 0; i < meshes.size(); i++) {

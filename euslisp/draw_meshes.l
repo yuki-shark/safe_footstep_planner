@@ -25,7 +25,7 @@
     (setq meshes (nconc meshes (list (instance face :init :vertices ver))))
     )
 
-  (dotimes (i (length meshes)) (send (elt meshes i) :draw-on :flush t))
+  (dotimes (i (length meshes)) (send (elt meshes i) :draw-on :flush t :color #f(0 0 0) :width 100))
   ) ;; defun
 
 ;; (make-irtviewer)
@@ -39,5 +39,7 @@
 #|
 (roseus)
 (make-irtviewer)
+(send *irtviewer* :change-background #f(1 1 1))
+(send *viewer* :viewing :look #f(0 0  -6000) #f(0 0.0 1))
 (load "draw_meshes.l")
 |#

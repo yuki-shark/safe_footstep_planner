@@ -11,7 +11,7 @@
 #include <jsk_recognition_utils/pcl_conversion_util.h>
 #include <jsk_recognition_utils/geo_util.h>
 #include <safe_footstep_planner/OnlineFootStep.h>
-#include "safe_footstep_util.h"
+#include <safe_footstep_planner/safe_footstep_util.h>
 
 class TargetHeightPublisher
 {
