@@ -15,6 +15,11 @@
 #include <sensor_msgs/CameraInfo.h>
 #include <image_geometry/pinhole_camera_model.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
+#include <geometry_msgs/PointStamped.h>
+#include <tf/transform_listener.h>
+
+#include <Eigen/Core>
+#include <safe_footstep_planner/safe_footstep_util.h>
 
 class ContoursConverter
 {
@@ -37,6 +42,7 @@ private:
 
   cv::Mat depth_image_;
   image_geometry::PinholeCameraModel model_;
+  tf::TransformListener listener_;
 
   void CameraInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& msg);
   void DepthImageCallback(const sensor_msgs::Image::ConstPtr& msg);
@@ -66,17 +72,13 @@ void ContoursConverter::DepthImageCallback(const sensor_msgs::Image::ConstPtr& m
 }
 
 void ContoursConverter::ContoursCallback(const opencv_apps::ContourArrayStamped::ConstPtr& msg) {
+  // check if required topics are subscribed
   if (depth_image_.empty()) {
     return;
   }
-
-  std::cout << "depth_image_" << std::endl;
-
   if (camera_info_.width < 0) {
     return;
   }
-
-  std::cout << "camera_info_" << std::endl;
 
   std::vector<opencv_apps::Contour> contours;
   contours = msg->contours;
@@ -90,9 +92,11 @@ void ContoursConverter::ContoursCallback(const opencv_apps::ContourArrayStamped:
   double constant_x = unit_scaling / model_.fx();
   double constant_y = unit_scaling / model_.fy();
 
+  // pointcloud msg initialization
   sensor_msgs::PointCloud2::Ptr cloud_msg(new sensor_msgs::PointCloud2);
 
   cloud_msg->header = msg->header;
+  cloud_msg->header.frame_id = "/map";
   cloud_msg->height = 480;
   cloud_msg->width  = 640;
   cloud_msg->is_dense = false;
@@ -105,42 +109,41 @@ void ContoursConverter::ContoursCallback(const opencv_apps::ContourArrayStamped:
   sensor_msgs::PointCloud2Iterator<float> iter_y(*cloud_msg, "y");
   sensor_msgs::PointCloud2Iterator<float> iter_z(*cloud_msg, "z");
 
+  // tf initialization
+  tf::StampedTransform transform;
+  listener_.lookupTransform("/left_camera_optical_frame", "/map", ros::Time(0), transform);
+  Eigen::Vector3f pos;
+  safe_footstep_util::vectorTFToEigen(transform.getOrigin(), pos);
+  Eigen::Matrix3f rot;
+  safe_footstep_util::matrixTFToEigen(transform.getBasis(), rot);
+
+  // convert pixel to coordinate
   for (int i = 0; i < contours.size(); i++) {
     std::cout << "contour : " << i << std::endl;
     for (opencv_apps::Point2D p : contours[i].points) {
       depth = depth_image_.at<float>(int(p.y), int(p.x));
-      // depth = depth_image_.at<double>(int(p.x), int(p.y));
-      // pz = depth_image_[int(p.x)][int(p.y)];
-      std::cout << "x : " << int(p.x) << "  y : " << int(p.y) << "  z : " << depth << std::endl;
-      *iter_x = (p.x - center_x) * depth * constant_x;
-      *iter_y = (p.y - center_y) * depth * constant_y;
-      *iter_z = depth;
+
+      // transform coordinate
+      geometry_msgs::Point32 original_point;
+      original_point.x = (p.x - center_x) * depth * constant_x;
+      original_point.y = (p.y - center_y) * depth * constant_y;
+      original_point.z = depth;
+
+      geometry_msgs::Point32 transformed_point;
+      safe_footstep_util::transformPoint(original_point, rot, pos, transformed_point);
+
+      std::cout << "x : " << transformed_point.x << "  y : " << transformed_point.y << "  z : " << transformed_point.z << std::endl;
+
+      *iter_x = transformed_point.x;
+      *iter_y = transformed_point.y;
+      *iter_z = transformed_point.z;
 
       ++iter_x;
       ++iter_y;
       ++iter_z;
 
-      // std::cout << "ix : " << iter_x << "  iy : " << iter_y << "  iz : " << iter_z << std::endl;
     }
   }
-
-  // publish pointcloud for debug
-
-  //hoge
-
-
-  // std::cout << "Camera Info " << std::endl;
-
-  // std::vector<std::vector<cv::Point> > contours;
-  // std::vector<cv::Vec4i> hierarchy;
-
-  // cv::Mat src_gray = cv_ptr->image;
-  // cv::Mat img_and;
-  // cv::bitwise_and(filled_convex_image_, src_gray, img_and);
-
-  // sensor_msgs::Image::Ptr out_img =
-  //   cv_bridge::CvImage(msg->header, sensor_msgs::image_encodings::MONO8, img_and).toImageMsg();
-  // steppable_region_pub_.publish(out_img);
   pointcloud_pub_.publish(cloud_msg);
 }
 
