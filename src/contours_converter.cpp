@@ -1,14 +1,8 @@
 #include <ros/ros.h>
-#include "opencv_apps/nodelet.h"
-#include <image_transport/image_transport.h>
 #include <sensor_msgs/image_encodings.h>
 #include <cv_bridge/cv_bridge.h>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
 #include <dynamic_reconfigure/server.h>
-#include "opencv_apps/FindContoursConfig.h"
 #include "opencv_apps/Contour.h"
-#include "opencv_apps/ContourArray.h"
 #include "opencv_apps/ContourArrayStamped.h"
 
 #include <sensor_msgs/Image.h>
@@ -20,6 +14,8 @@
 
 #include <Eigen/Core>
 #include <safe_footstep_planner/safe_footstep_util.h>
+#include <safe_footstep_planner/PolygonArray.h>
+#include <geometry_msgs/Polygon.h>
 
 class ContoursConverter
 {
@@ -35,6 +31,7 @@ private:
   ros::Publisher img_pub_;
   ros::Publisher steppable_region_pub_;
   ros::Publisher pointcloud_pub_;
+  ros::Publisher polygon_pub_;
 
   ros::Subscriber camera_info_sub_;
   ros::Subscriber depth_image_sub_;
@@ -54,6 +51,7 @@ ContoursConverter::ContoursConverter() : nh_(""), pnh_("~")
   img_pub_ = nh_.advertise<sensor_msgs::Image>("board_image", 1);
   steppable_region_pub_ = nh_.advertise<sensor_msgs::Image>("steppable_region_image", 1);
   pointcloud_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("contours_pointcloud", 1);
+  polygon_pub_ = nh_.advertise<safe_footstep_planner::PolygonArray>("steppable_polygons", 1);
   camera_info_sub_ = nh_.subscribe("/multisense_local/left/camera_info", 1, &ContoursConverter::CameraInfoCallback, this);
   depth_image_sub_ = nh_.subscribe("/multisense_local/depth", 1, &ContoursConverter::DepthImageCallback, this);
   contours_sub_ = nh_.subscribe("/convex_full/hulls", 1, &ContoursConverter::ContoursCallback, this);
@@ -118,8 +116,10 @@ void ContoursConverter::ContoursCallback(const opencv_apps::ContourArrayStamped:
   safe_footstep_util::matrixTFToEigen(transform.getBasis(), rot);
 
   // convert pixel to coordinate
+  safe_footstep_planner::PolygonArray polygon_array_msg;
   for (int i = 0; i < contours.size(); i++) {
-    std::cout << "contour : " << i << std::endl;
+    geometry_msgs::Polygon polygon;
+    // std::cout << "contour : " << i << std::endl;
     for (opencv_apps::Point2D p : contours[i].points) {
       depth = depth_image_.at<float>(int(p.y), int(p.x));
 
@@ -132,19 +132,22 @@ void ContoursConverter::ContoursCallback(const opencv_apps::ContourArrayStamped:
       geometry_msgs::Point32 transformed_point;
       safe_footstep_util::transformPoint(original_point, rot, pos, transformed_point);
 
-      std::cout << "x : " << transformed_point.x << "  y : " << transformed_point.y << "  z : " << transformed_point.z << std::endl;
+      // std::cout << "x : " << transformed_point.x << "  y : " << transformed_point.y << "  z : " << transformed_point.z << std::endl;
 
       *iter_x = transformed_point.x;
       *iter_y = transformed_point.y;
       *iter_z = transformed_point.z;
 
+      polygon.points.push_back(transformed_point);
+
       ++iter_x;
       ++iter_y;
       ++iter_z;
-
     }
+    polygon_array_msg.polygons.push_back(polygon);
   }
   pointcloud_pub_.publish(cloud_msg);
+  polygon_pub_.publish(polygon_array_msg);
 }
 
 int main(int argc, char **argv)
