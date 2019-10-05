@@ -1,0 +1,134 @@
+<launch>
+  <arg name="MANAGER" default="color_filter_nodelet_manager" />
+  <arg name="INPUT_IMAGE" default="/multisense_local/left/image_rect_color" />
+  <arg name="contours_debug_view" default="true" />
+  <arg name="rviz" default="true" />
+
+  <node name="$(arg MANAGER)"
+        pkg="nodelet" type="nodelet"
+        args="manager" />
+
+  <include file="$(find opencv_apps)/launch/hsv_color_filter.launch" >
+    <arg name="node_name" value="left_hsv_color_filter" />
+    <arg name="image" value="$(arg INPUT_IMAGE)" />
+    <!-- real env -->
+    <!-- <arg name="h_limit_max" value="191" doc="The maximum allowed field value Hue" /> -->
+    <!-- <arg name="h_limit_min" value="44" doc="The minimum allowed field value Hue" /> -->
+    <!-- <arg name="s_limit_max" value="32" doc="The maximum allowed field value Saturation" /> -->
+    <!-- <arg name="s_limit_min" value="0" doc="The minimum allowed field value Saturation" /> -->
+    <!-- <arg name="v_limit_max" value="218" doc="The maximum allowed field value Value" /> -->
+    <!-- <arg name="v_limit_min" value="113" doc="The minimum allowed field value Value" /> -->
+    <!-- choreonoid -->
+    <arg name="h_limit_max" value="191" doc="The maximum allowed field value Hue" />
+    <arg name="h_limit_min" value="0" doc="The minimum allowed field value Hue" />
+    <arg name="s_limit_max" value="120" doc="The maximum allowed field value Saturation" />
+    <arg name="s_limit_min" value="0" doc="The minimum allowed field value Saturation" />
+    <arg name="v_limit_max" value="256" doc="The maximum allowed field value Value" />
+    <arg name="v_limit_min" value="0" doc="The minimum allowed field value Value" />
+    <arg name="debug_view" value="false" />
+  </include>
+
+  <node name="left_dilate_mask_image"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_perception/DilateMaskImage $(arg MANAGER)">
+    <remap from="~input" to="left_hsv_color_filter/image" />
+    <rosparam>
+      method: 0
+      size: 3
+    </rosparam>
+  </node>
+
+  <node name="left_erode_mask_image"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_perception/ErodeMaskImage $(arg MANAGER)">
+    <remap from="~input" to="left_dilate_mask_image/output" />
+    <rosparam>
+      method: 0
+      size: 3
+    </rosparam>
+  </node>
+
+  <include file="$(find opencv_apps)/launch/hsv_color_filter.launch" >
+    <arg name="node_name" value="board_hsv_color_filter" />
+    <arg name="image" value="$(arg INPUT_IMAGE)" />
+    <!-- real env -->
+    <!-- <arg name="h_limit_max" value="62" doc="The maximum allowed field value Hue" /> -->
+    <!-- <arg name="h_limit_min" value="34" doc="The minimum allowed field value Hue" /> -->
+    <!-- <arg name="s_limit_max" value="126" doc="The maximum allowed field value Saturation" /> -->
+    <!-- <arg name="s_limit_min" value="26" doc="The minimum allowed field value Saturation" /> -->
+    <!-- <arg name="v_limit_max" value="256" doc="The maximum allowed field value Value" /> -->
+    <!-- <arg name="v_limit_min" value="157" doc="The minimum allowed field value Value" /> -->
+    <!-- choreonoid -->
+    <arg name="h_limit_max" value="62" doc="The maximum allowed field value Hue" />
+    <arg name="h_limit_min" value="0" doc="The minimum allowed field value Hue" />
+    <arg name="s_limit_max" value="256" doc="The maximum allowed field value Saturation" />
+    <arg name="s_limit_min" value="140" doc="The minimum allowed field value Saturation" />
+    <arg name="v_limit_max" value="256" doc="The maximum allowed field value Value" />
+    <arg name="v_limit_min" value="0" doc="The minimum allowed field value Value" />
+    <arg name="debug_view" value="false" />
+  </include>
+
+  <node name="board_erode_mask_image"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_perception/ErodeMaskImage $(arg MANAGER)">
+    <remap from="~input" to="board_hsv_color_filter/image" />
+    <rosparam>
+      method: 0
+      size: 2
+    </rosparam>
+  </node>
+
+  <node name="board_dilate_mask_image"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_perception/DilateMaskImage $(arg MANAGER)">
+    <remap from="~input" to="board_erode_mask_image/output" />
+    <rosparam>
+      method: 0
+      size: 10
+    </rosparam>
+  </node>
+
+  <node name="board_erode_mask_image2"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_perception/ErodeMaskImage $(arg MANAGER)">
+    <remap from="~input" to="board_dilate_mask_image/output" />
+    <rosparam>
+      method: 0
+      size: 12
+    </rosparam>
+  </node>
+
+  <node name="draw_contours" pkg="safe_footstep_planner" type="draw_contours" />
+
+  <node name="erode_mask_image"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_perception/ErodeMaskImage $(arg MANAGER)">
+    <remap from="~input" to="steppable_region_image" />
+    <rosparam>
+      method: 0
+      size: 5
+    </rosparam>
+  </node>
+
+  <node name="dilate_mask_image"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_perception/DilateMaskImage $(arg MANAGER)">
+    <remap from="~input" to="erode_mask_image/output" />
+    <rosparam>
+      method: 0
+      size: 3
+    </rosparam>
+  </node>
+
+  <include file="$(find opencv_apps)/launch/convex_hull.launch">
+    <arg name="node_name" value="convex_full" />
+    <arg name="image"  value="/dilate_mask_image/output" />
+    <arg name="debug_view"  value="$(arg contours_debug_view)" />
+  </include>
+
+  <node name="contours_converter" pkg="safe_footstep_planner" type="contours_converter" />
+  <node name="simple_polygon_to_mesh" pkg="safe_footstep_planner" type="simple-polygon-to-mesh.l" output="screen"/>
+
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find safe_footstep_planner)/config/contours_debug.rviz" if="$(arg rviz)"/>
+
+</launch>
