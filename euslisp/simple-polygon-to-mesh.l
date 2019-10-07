@@ -8,7 +8,7 @@
   (setq polygon-holes (list))
   (setq islands (list))
   ;; (format t "contours : ~A~%" (length contours))
-  (setq margin 0.03)
+  (setq margin 0.01)
   ;; (format t "margin   : ~A [m]~%" margin)
 
   (setq triangles (list))
@@ -18,9 +18,11 @@
     ;; (format t "points : ~A~%" (length points))
 
     ;; get centroid of the target hole
-    (dotimes (j (- (length points) 1))
-      (setq x (send (elt points (+ j 1)) :x))
-      (setq y (send (elt points (+ j 1)) :y))
+    (dotimes (j (length points))
+      ;; (setq x (send (elt points (+ j 1)) :x))
+      ;; (setq y (send (elt points (+ j 1)) :y))
+      (setq x (send (elt points j) :x))
+      (setq y (send (elt points j) :y))
       (when (= j 0)
         (setq px x)
         (setq py y)
