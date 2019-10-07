@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+# from __future__ import print_function
+
+import sys
+import os
+import rospy
+import rospkg
+import copy
+from safe_footstep_planner.msg import PolygonArray
+
+class fixed_steppable_polygons_publisher:
+
+  def __init__(self):
+    self.sub_steppable_polygons = rospy.Subscriber("/steppable_polygons", PolygonArray, self.PolygonArrayCallback)
+    self.pub_fixed_steppable_polygons = rospy.Publisher("/fixed_steppable_polygons", PolygonArray, queue_size=1)
+    self.polygon_array = None
+    self.fixed_polygon_array = None
+
+  def PolygonArrayCallback(self, data):
+    self.polygon_array = data
+    if self.fixed_polygon_array:
+      self.pub_fixed_steppable_polygons.publish(self.fixed_polygon_array)
+    else:
+      self.pub_fixed_steppable_polygons.publish(self.polygon_array)
+
+  def FixSteppablePolygons(self):
+    print ('Press "f" to finish')
+    while (True):
+      if self.polygon_array:
+        key = raw_input('>>> Press Enter to fix /steppable_polygons')
+        if key == 'f':
+          return
+        else:
+          self.fixed_polygon_array = copy.deepcopy(self.polygon_array)
+
+def main(args):
+  rospy.init_node('fixed_steppable_polygons_publisher', anonymous=True)
+  operator = fixed_steppable_polygons_publisher()
+  try:
+    operator.FixSteppablePolygons()
+    rospy.spin()
+  except KeyboardInterrupt:
+    print("Shutting down")
+
+if __name__ == '__main__':
+    main(sys.argv)

@@ -72,7 +72,8 @@
 (ros::roseus "simple_polygon_to_mesh")
 (format t "init~%")
 (ros::advertise "meshed_polygons" safe_footstep_planner::PolygonArray 1)
-(ros::subscribe "steppable_polygons" safe_footstep_planner::PolygonArray #'callback 3)
+;; (ros::subscribe "steppable_polygons" safe_footstep_planner::PolygonArray #'callback 3)
+(ros::subscribe "fixed_steppable_polygons" safe_footstep_planner::PolygonArray #'callback 3)
 (do-until-key
  (ros::spin-once))
 (format t "Shutdown Controller~%")
