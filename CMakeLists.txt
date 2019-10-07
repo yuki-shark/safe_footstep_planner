@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 2.8.3)
 project(safe_footstep_planner)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 find_package(catkin REQUIRED COMPONENTS
@@ -56,9 +55,6 @@ target_link_libraries(rect_publisher ${catkin_LIBRARIES})
 add_executable(convert_to_map_coords src/convert_to_map_coords.cpp)
 target_link_libraries(convert_to_map_coords ${catkin_LIBRARIES})
 
-add_executable(target_height_publisher src/target_height_publisher.cpp)
-target_link_libraries(target_height_publisher ${catkin_LIBRARIES})
-
 add_executable(steppable_region_publisher src/steppable_region_publisher.cpp)
 target_link_libraries(steppable_region_publisher ${catkin_LIBRARIES})
 
@@ -67,3 +63,7 @@ target_link_libraries(draw_contours ${catkin_LIBRARIES})
 
 add_executable(contours_converter src/contours_converter.cpp)
 target_link_libraries(contours_converter ${catkin_LIBRARIES})
+
+set_source_files_properties(src/target_height_publisher.cpp PROPERTIES COMPILE_FLAGS -std=c++98)
+add_executable(target_height_publisher src/target_height_publisher.cpp)
+target_link_libraries(target_height_publisher ${catkin_LIBRARIES})
