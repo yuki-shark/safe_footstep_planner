@@ -41,6 +41,6 @@
 (roseus)
 (make-irtviewer)
 (send *irtviewer* :change-background #f(1 1 1))
-(send *viewer* :viewing :look #f(0 0  -6000) #f(0 0.0 1))
+(send *viewer* :viewing :look #f(0 0 6000) #f(1000 0 0))
 (load "draw_meshes.l")
 |#
