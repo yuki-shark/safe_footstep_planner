@@ -37,6 +37,7 @@
          (box-q)
          (box-size)
          (root-rot)
+         (box-pos-off #f(0 0 0))
          )
     (when (> (length (send msg :boxes)) 0)
       (dotimes (i (length (send msg :boxes)))
@@ -57,6 +58,7 @@
       (setq box-q (send (elt (send msg :boxes) max-idx) :pose :orientation))
       (setq box-size (send (elt (send msg :boxes) max-idx) :dimensions))
       (setq *box-pos* (scale 1000 (float-vector (send box-pos :x) (send box-pos :y) (send box-pos :z) )))
+      (setq *box-pos* (v+ *box-pos* box-pos-off))
       (setq *box-rot* (quaternion2matrix (float-vector (send box-q :x) (send box-q :y) (send box-q :z) (send box-q :w))))
       ;; (setq *box-size* (scale 1000 (float-vector (send box-size :x) (send box-size :y) (send box-size :z))))
       (setq *box-size* (scale 1000 (float-vector (send box-size :z) (send box-size :y) (send box-size :x))))
@@ -99,6 +101,10 @@
 
 (defun emergency-touch-wall
     ()
+  (warn "cog a~%")
+  (print *cog-pos*)
+  (warn "cog b~%")
+  (setq *cog-pos* (float-vector 200 0 (elt (send (send *robot* :rleg :end-coords) :worldpos) 2)))
   (setq *contact-list*
         (list (generate-contact-ik-arg-from-rect-face :rect-face *face* :name "larm")
               (generate-contact-ik-arg-from-rect-face :rect-face *face* :name "rarm")
@@ -156,11 +162,16 @@
                              :init-from-support-polygon
                              :support-polygon (send (send (send *robot* (if (equal *l_r* 0) :lleg :rleg) :end-coords) :parent) :get :support-polygon)
                              :support-polygon-coords (send (send *robot* (if (equal *l_r* 0) :lleg :rleg) :end-coords) :worldcoords)
+                             :mu-trans 0.1
                              )
                    (instance default-contact-constraint
-                             :init-from-support-polygon :support-polygon nil)
+                             :init-from-support-polygon :support-polygon nil
+                             ;; :mu-trans 0.01
+                             )
                    (instance default-contact-constraint
-                             :init-from-support-polygon :support-polygon nil)
+                             :init-from-support-polygon :support-polygon nil
+                             ;; :mu-trans 0.01
+                             )
                    )
                   ))
   (setq *sqp-opt*
@@ -179,6 +190,7 @@
          (next-swg-leg-pos)
          (end-cog-pos) ;; world (root-link) frame
          (omega (sqrt (/ 9.80665 (elt *end-cog-pos* 2))))
+         (sup-off #f(150 0 0))
          )
     (setq next-sup-leg-pos
           (send
@@ -186,6 +198,7 @@
                (send (send (send *robot* :lleg :end-coords) :copy-worldcoords) :translate *lleg-trans-pos*)
              (send (send (send *robot* :rleg :end-coords) :copy-worldcoords) :translate *rleg-trans-pos*))
            :worldpos))
+    (setq next-sup-leg-pos (v+ next-sup-leg-pos sup-off))
     (setq next-swg-leg-pos
           (send
            (if (equal *l_r* 0)
@@ -201,17 +214,17 @@
            next-sup-leg-pos))
 
     ;; debug
-    ;; (setq *sup* next-sup-leg-pos)
-    ;; (setq *swg* next-swg-leg-pos)
-    ;; (setq *omega* omega)
-    ;; (setq *vel* *end-cog-vel*)
-    ;; (setq *cog* end-cog-pos)
-    ;; (setq *cog-orig* *end-cog-pos*)
-    ;; (setq *lleg-trans* *lleg-trans-pos*)
-    ;; (setq *rleg-trans* *rleg-trans-pos*)
-    ;; (setq *lr* *l_r*)
-    ;; (setq *lleg* (send (send *robot* :lleg :end-coords) :copy-worldcoords))
-    ;; (setq *rleg* (send (send *robot* :rleg :end-coords) :copy-worldcoords))
+    (setq *sup* next-sup-leg-pos)
+    (setq *swg* next-swg-leg-pos)
+    (setq *omega* omega)
+    (setq *vel* *end-cog-vel*)
+    (setq *cog* end-cog-pos)
+    (setq *cog-orig* *end-cog-pos*)
+    (setq *lleg-trans* *lleg-trans-pos*)
+    (setq *rleg-trans* *rleg-trans-pos*)
+    (setq *lr* *l_r*)
+    (setq *lleg* (send (send *robot* :lleg :end-coords) :copy-worldcoords))
+    (setq *rleg* (send (send *robot* :rleg :end-coords) :copy-worldcoords))
     ;; (setq *cog-pos*
     ;;       (v+
     ;;        (v+
@@ -257,7 +270,7 @@
              ))
       )
     )
-  (calc-cog-pos 1.4)
+  (calc-cog-pos 0.1)
   ;; (setq *cog-pos* (float-vector 200 0 (elt (send (send *robot* :rleg :end-coords) :worldpos) 2)))
   ;; solve IK
   (emergency-touch-wall)
@@ -366,8 +379,8 @@
                   :only-kinematics? nil
                   :kin-target-coords-list
                   (list
-                   (send (send *robot* :lleg :end-coords) :copy-worldcoords)
-                   (send (send *robot* :rleg :end-coords) :copy-worldcoords)
+                   (send (send (send *robot* :lleg :end-coords) :copy-worldcoords) :translate *lleg-trans-height-off*)
+                   (send (send (send *robot* :rleg :end-coords) :copy-worldcoords) :translate *rleg-trans-height-off*)
                    (send (send *robot* :get :larm-contact-coords) :copy-worldcoords)
                    (send (send *robot* :get :rarm-contact-coords) :copy-worldcoords)
                    (make-coords :pos *cog-pos*)
@@ -408,11 +421,16 @@
                              :init-from-support-polygon
                              :support-polygon (send (send (send *robot* (if (equal *l_r* 0) :lleg :rleg) :end-coords) :parent) :get :support-polygon)
                              :support-polygon-coords (send (send *robot* (if (equal *l_r* 0) :lleg :rleg) :end-coords) :worldcoords)
+                             :mu-trans 0.2
                              )
                    (instance default-contact-constraint
-                             :init-from-support-polygon :support-polygon nil)
+                             :init-from-support-polygon :support-polygon nil
+                             ;; :mu-trans 0.01
+                             )
                    (instance default-contact-constraint
-                             :init-from-support-polygon :support-polygon nil)
+                             :init-from-support-polygon :support-polygon nil
+                             ;; :mu-trans 0.01
+                             )
                    )
                   ))
   (setq *sqp-opt*
@@ -479,11 +497,16 @@
                              :init-from-support-polygon
                              :support-polygon (send (send (send *robot* (if (equal *l_r* 0) :lleg :rleg) :end-coords) :parent) :get :support-polygon)
                              :support-polygon-coords (send (send *robot* (if (equal *l_r* 0) :lleg :rleg) :end-coords) :worldcoords)
+                             :mu-trans 0.2
                              )
                    (instance default-contact-constraint
-                             :init-from-support-polygon :support-polygon nil)
+                             :init-from-support-polygon :support-polygon nil
+                             ;; :mu-trans 0.01
+                             )
                    (instance default-contact-constraint
-                             :init-from-support-polygon :support-polygon nil)
+                             :init-from-support-polygon :support-polygon nil
+                             ;; :mu-trans 0.01
+                             )
                    )
                   ))
   (setq *sqp-opt*
@@ -566,6 +589,7 @@
     ()
   (let* ((rleg-pos)
          (lleg-pos))
+    (send *ri* :set-auto-balancer-param :is-emergency-step-mode nil)
     (send *ri* :go-stop)
     (send *robot* :angle-vector *emergency-av*)
     (send *robot* :fix-leg-to-coords (make-coords) (if (equal *emergency-l_r* 0) :lleg :rleg))
@@ -584,9 +608,14 @@
     (setq lleg-coords (send (send *robot* :lleg :end-coords) :copy-worldcoords))
     (setq *rleg-trans-height* #f(0 0 0))
     (setq *lleg-trans-height* #f(0 0 0))
+    (setq *rleg-trans-height-off* #f(0 0 0))
+    (setq *lleg-trans-height-off* #f(0 0 0))
     (if (equal *emergency-l_r* 0)
         (setq *rleg-trans-height* #f(0 0 30))
       (setq *lleg-trans-height* #f(0 0 30)))
+    (if (equal *emergency-l_r* 0)
+        (setq *rleg-trans-height-off* #f(0 0 25))
+      (setq *lleg-trans-height-off* #f(0 0 25)))
     (w-touch-in-tri)
     (setq *av2* (send *robot* :angle-vector))
     (send *robot* :angle-vector *av3*)
@@ -597,7 +626,8 @@
     (send *robot* :fix-leg-to-coords (make-coords))
     (wo-touch-manip)
     (setq *av4* (send *robot* :angle-vector))
-    (send *ri* :angle-vector-sequence (list *av1* *av2* *av3* *av4*) (list 5000 1000 5000 5000))
+    ;; (send *ri* :set-ref-force #f(-200 0 0) 5000 :arms)
+    (send *ri* :angle-vector-sequence (list *av1* *av2* *av3* *av4*) (list 5000 3000 3000 3000))
     (send *ri* :wait-interpolation)
     (send *ri* :start-auto-balancer)
     (send *ri* :autobalancerservice_startstabilizer)
@@ -616,9 +646,10 @@
      (setq *emergency-face* *face*)
      (setq *emergency-board* *board*)
      (setq *emergency-l_r* *l_r*)
+     (send *ri* :angle-vector *emergency-av* 1000)
      )
    (when (and *is-stopping* (equal (send *ri* :get-auto-balancer-controller-mode) :mode_idle))
-     (objects (list *robot* *emergency-board*))
+     (objects (list *robot*))
      (release-robot)
      )
    (unless *is-stopping*
@@ -636,7 +667,7 @@
 (ros::roseus "touch_wall")
 ;; (ros::subscribe "touchable_wall" jsk_recognition_msgs::BoundingBoxArray #'wall-callback 1)
 ;; (ros::subscribe "/valve_recognition/cluster_decomposer/boxes" jsk_recognition_msgs::BoundingBoxArray #'wall-callback 1)
-(ros::subscribe "/valve_recognition/walls/output" jsk_recognition_msgs::BoundingBoxArray #'wall-callback 1)
+(ros::subscribe "/valve_recognition/walls/output" jsk_recognition_msgs::BoundingBoxArray #'wall-callback 10)
 (ros::subscribe "/landing_target" safe_footstep_planner::OnlineFootStep #'target-callback 1)
 (ros::subscribe "/end_cog_state" hrpsys_ros_bridge::CogState #'end-cog-callback 1)
 (setup-wall)

@@ -4,28 +4,29 @@
 
 (defun callback(msg)
   (format t "callback~%")
+  (send *irtviewer* :draw-objects)
   (setq polygons (send msg :polygons))
   (setq meshes (list))
   (dotimes (i (length polygons))
     (setq polygon (send (elt polygons i) :points))
     (setq ver (list))
     (dotimes (j (length polygon))
-      (setq ver (nconc ver (list (float-vector
+      (setq ver (nconc ver (list (scale 1e3 (float-vector
                                   (send (elt polygon j) :x)
                                   (send (elt polygon j) :y)
                                   (send (elt polygon j) :z)
-                                  ))))
+                                  )))))
       )
     ;; for closing loop (remove if not required)
-    (setq ver (nconc ver (list (float-vector
+    (setq ver (nconc ver (list (scale 1e3 (float-vector
                                 (send (elt polygon 0) :x)
                                 (send (elt polygon 0) :y)
                                 (send (elt polygon 0) :z)
-                                ))))
+                                )))))
     (setq meshes (nconc meshes (list (instance face :init :vertices ver))))
     )
 
-  (dotimes (i (length meshes)) (send (elt meshes i) :draw-on :flush t :color #f(0 0 0) :width 100))
+  (dotimes (i (length meshes)) (send (elt meshes i) :draw-on :flush t :color #f(0 0 0) :width 1))
   ) ;; defun
 
 ;; (make-irtviewer)

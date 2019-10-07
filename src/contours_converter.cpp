@@ -12,7 +12,7 @@
 #include <geometry_msgs/PointStamped.h>
 #include <tf/transform_listener.h>
 
-#include <Eigen/Core>
+#include <jsk_recognition_utils/pcl_conversion_util.h>
 #include <safe_footstep_planner/safe_footstep_util.h>
 #include <safe_footstep_planner/PolygonArray.h>
 #include <geometry_msgs/Polygon.h>
