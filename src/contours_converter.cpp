@@ -41,6 +41,12 @@ private:
   image_geometry::PinholeCameraModel model_;
   tf::TransformListener listener_;
 
+  static bool PairCompare(const std::pair<double, geometry_msgs::Point32>& a,
+                          const std::pair<double, geometry_msgs::Point32>& b) {
+    return a.first < b.first;
+  }
+
+  geometry_msgs::Polygon SortPolygonPoints(geometry_msgs::Polygon polygon);
   void CameraInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& msg);
   void DepthImageCallback(const sensor_msgs::Image::ConstPtr& msg);
   void ContoursCallback(const opencv_apps::ContourArrayStamped::ConstPtr& msg);
@@ -56,6 +62,38 @@ ContoursConverter::ContoursConverter() : nh_(""), pnh_("~")
   depth_image_sub_ = nh_.subscribe("/multisense_local/depth", 1, &ContoursConverter::DepthImageCallback, this);
   contours_sub_ = nh_.subscribe("/convex_full/hulls", 1, &ContoursConverter::ContoursCallback, this);
 }
+
+geometry_msgs::Polygon ContoursConverter::SortPolygonPoints(geometry_msgs::Polygon polygon) {
+  // calc center of the polygon
+  double c_x = 0;
+  double c_y = 0;
+  for (int i = 0; i < polygon.points.size(); i++) {
+    c_x += polygon.points[i].x;
+    c_y += polygon.points[i].y;
+  }
+  c_x /= polygon.points.size();
+  c_y /= polygon.points.size();
+
+  // calc theta from the center
+  std::vector<std::pair<double, geometry_msgs::Point32>> theta_array;
+  double t;
+  for (int i = 0; i < polygon.points.size(); i++) {
+    t = atan2(c_y - polygon.points[i].y, polygon.points[i].x - c_x);
+    theta_array.push_back(make_pair(t, polygon.points[i]));
+  }
+
+  // sort points by theta
+  std::sort(theta_array.begin(), theta_array.end(), ContoursConverter::PairCompare);
+
+  // generate sorted polygon
+  geometry_msgs::Polygon sorted_polygon;
+  for (int i = 0; i < polygon.points.size(); i++) {
+    sorted_polygon.points.push_back(theta_array[i].second);
+  }
+
+  return sorted_polygon;
+}
+
 
 void ContoursConverter::CameraInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& msg) {
   camera_info_ = *msg;
@@ -145,6 +183,10 @@ void ContoursConverter::ContoursCallback(const opencv_apps::ContourArrayStamped:
       ++iter_z;
     }
     polygon_array_msg.polygons.push_back(polygon);
+
+    // sort points by clockwise
+    polygon = ContoursConverter::SortPolygonPoints(polygon);
+
   }
   pointcloud_pub_.publish(cloud_msg);
   polygon_pub_.publish(polygon_array_msg);
