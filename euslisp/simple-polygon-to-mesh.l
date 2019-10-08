@@ -9,6 +9,7 @@
   (setq islands (list))
   ;; (format t "contours : ~A~%" (length contours))
   (setq margin 0.01)
+  (setq inner-margin 0.05)
   ;; (format t "margin   : ~A [m]~%" margin)
 
   (setq triangles (list))
@@ -36,8 +37,27 @@
         )
       )
 
-    ;; generate triangle mesh from polygon
+    ;; generate small polygon
+    ;; Please replace here
+    ;; ========================================================================
     (setq f (instance face :init :vertices polygon))
+    (setq xc (elt (cadr (send f :centroid)) 0))
+    (setq yc (elt (cadr (send f :centroid)) 1))
+
+    (setq small-polygon (list))
+    (dotimes (j (length points))
+      (setq x (send (elt points j) :x))
+      (setq y (send (elt points j) :y))
+      (setq vec (float-vector (- x xc) (- y yc) 0))
+      (setq np (v+ (float-vector x y 0) (scale (/ (* -1 inner-margin) (norm vec)) (float-vector (elt vec 0) (elt vec 1) 0))))
+      ;; (setq npi (v+ (float-vector x y 0) (scale (/ (* -1 margin) (norm vec)) (float-vector (elt vec 0) (elt vec 1) 0))))
+      (setq small-polygon (nconc small-polygon (list (float-vector (elt np 0) (elt np 1) 0))))
+      )
+
+    ;; generate triangle mesh from polygon
+    (setq f (instance face :init :vertices small-polygon))
+    ;; ========================================================================
+
     (setq triangles (nconc triangles (geometry::face-to-triangle f)))
 
     )
