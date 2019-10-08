@@ -127,7 +127,11 @@
   </include>
 
   <node name="contours_converter" pkg="safe_footstep_planner" type="contours_converter" />
+  <node name="fixed_steppable_polygons_publisher" pkg="safe_footstep_planner" type="fixed_steppable_polygons_publisher" output="screen"/>
   <node name="simple_polygon_to_mesh" pkg="safe_footstep_planner" type="simple-polygon-to-mesh.l" output="screen"/>
+  <node name="steppable_region_publisher" pkg="safe_footstep_planner" type="steppable_region_publisher" />
+
+  <node name="draw_meshes" pkg="safe_footstep_planner" type="draw_meshes.l" output="screen"/>
 
   <node type="rviz" name="rviz" pkg="rviz" args="-d $(find safe_footstep_planner)/config/contours_debug.rviz" if="$(arg rviz)"/>
 

@@ -3,7 +3,7 @@
 (ros::roseus-add-msgs "safe_footstep_planner")
 
 (defun callback(msg)
-  (format t "callback~%")
+  ;; (format t "callback~%")
   (send *irtviewer* :draw-objects)
   (setq polygons (send msg :polygons))
   (setq meshes (list))
@@ -30,6 +30,9 @@
   ) ;; defun
 
 ;; (make-irtviewer)
+(make-irtviewer)
+(send *irtviewer* :change-background #f(1 1 1))
+(send *viewer* :viewing :look #f(0 0 6000) #f(1000 0 0))
 (send *irtviewer* :draw-objects)
 (ros::roseus "draw_polygons")
 (ros::subscribe "combined_meshed_polygons" safe_footstep_planner::PolygonArray #'callback 1)
