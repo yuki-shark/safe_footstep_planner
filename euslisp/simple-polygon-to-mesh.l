@@ -8,8 +8,8 @@
   (setq polygon-holes (list))
   (setq islands (list))
   ;; (format t "contours : ~A~%" (length contours))
-  (setq margin 0.01)
-  (setq inner-margin 0.05)
+  (setq margin 0.03)
+  (setq inner-margin 0.03)
   ;; (format t "margin   : ~A [m]~%" margin)
 
   (setq triangles (list))
@@ -25,6 +25,7 @@
       (setq x (send (elt points j) :x))
       (setq y (send (elt points j) :y))
       (when (= j 0)
+        (setq polygon (nconc polygon (list (float-vector x y 0))))
         (setq px x)
         (setq py y)
         )
@@ -40,18 +41,31 @@
     ;; generate small polygon
     ;; Please replace here
     ;; ========================================================================
-    (setq f (instance face :init :vertices polygon))
-    (setq xc (elt (cadr (send f :centroid)) 0))
-    (setq yc (elt (cadr (send f :centroid)) 1))
-
     (setq small-polygon (list))
-    (dotimes (j (length points))
-      (setq x (send (elt points j) :x))
-      (setq y (send (elt points j) :y))
-      (setq vec (float-vector (- x xc) (- y yc) 0))
-      (setq np (v+ (float-vector x y 0) (scale (/ (* -1 inner-margin) (norm vec)) (float-vector (elt vec 0) (elt vec 1) 0))))
-      ;; (setq npi (v+ (float-vector x y 0) (scale (/ (* -1 margin) (norm vec)) (float-vector (elt vec 0) (elt vec 1) 0))))
-      (setq small-polygon (nconc small-polygon (list (float-vector (elt np 0) (elt np 1) 0))))
+    (setq p-len (length polygon))
+    (dotimes (j (length polygon))
+      (setq v0 (float-vector (elt (elt polygon (mod (+ j 1) p-len)) 0) (elt (elt polygon (mod (+ j 1) p-len)) 1) 0))
+      (setq va (float-vector (elt (elt polygon (mod (+ j 2) p-len)) 0) (elt (elt polygon (mod (+ j 2) p-len)) 1) 0))
+      (setq vb (float-vector (elt (elt polygon j) 0) (elt (elt polygon j) 1) 0))
+      (setq ea (normalize-vector (v- va v0)))
+      (setq eb (normalize-vector (v- vb v0)))
+      (setq theta (acos (v. ea eb)))
+      (if (> (elt (v* ea eb) 2) 0) (setq theta (- (* 2 pi) theta)))
+      (setq np (v+
+                v0
+                (scale
+                 (/ inner-margin (* (norm (v+ ea eb)) (sin (/ theta 2))))
+                 (v+ ea eb))))
+      (when (= j 0)
+        (setq small-polygon (nconc small-polygon (list (float-vector (elt np 0) (elt np 1) 0))))
+        (setq pre-np np)
+        )
+      (when (> j 0)
+        (when (> (norm (v- np pre-np)) margin)
+          (setq small-polygon (nconc small-polygon (list (float-vector (elt np 0) (elt np 1) 0))))
+          (setq pre-np np)
+          )
+        )
       )
 
     ;; generate triangle mesh from polygon
