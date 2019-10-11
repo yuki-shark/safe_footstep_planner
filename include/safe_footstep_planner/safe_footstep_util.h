@@ -103,14 +103,15 @@ namespace safe_footstep_util
 
   void calcFootRotFromNormal (Eigen::Matrix3f& foot_rot, const Eigen::Matrix3f& orig_rot, const Eigen::Vector3f& n)
   {
+    Eigen::Vector3f en = n / n.norm();
     Eigen::Vector3f ex = Eigen::Vector3f::UnitX();
     Eigen::Vector3f xv1(orig_rot * ex);
-    xv1 = xv1 - xv1.dot(n) * n;
+    xv1 = xv1 - xv1.dot(en) * en;
     xv1.normalize();
-    Eigen::Vector3f yv1(n.cross(xv1));
+    Eigen::Vector3f yv1(en.cross(xv1));
     foot_rot(0,0) = xv1(0); foot_rot(1,0) = xv1(1); foot_rot(2,0) = xv1(2);
     foot_rot(0,1) = yv1(0); foot_rot(1,1) = yv1(1); foot_rot(2,1) = yv1(2);
-    foot_rot(0,2) = n(0);  foot_rot(1,2) = n(1);  foot_rot(2,2) = n(2);
+    foot_rot(0,2) = en(0);  foot_rot(1,2) = en(1);  foot_rot(2,2) = en(2);
   }
 
   bool compare_eigen3f(const Eigen::Vector3f& lv, const Eigen::Vector3f& rv)
