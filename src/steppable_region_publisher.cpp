@@ -161,17 +161,17 @@ void SteppableRegionPublisher::meshCallback(const safe_footstep_planner::Polygon
     is_combined[i] = true;
   }
 
-  // add near mesh
-  tf::StampedTransform transform;
-  listener_.lookupTransform("/map", "/rleg_end_coords", ros::Time(0), transform); // map relative to rleg
-  Eigen::Vector3f rfoot_pos;
-  safe_footstep_util::vectorTFToEigen(transform.getOrigin(), rfoot_pos);
-  std::vector<Eigen::Vector3f> near_mesh(4);
-  near_mesh[0] = Eigen::Vector3f(rfoot_pos(0)-0.15, rfoot_pos(1)-0.25, 0);
-  near_mesh[1] = Eigen::Vector3f(rfoot_pos(0)+0.15, rfoot_pos(1)-0.25, 0);
-  near_mesh[2] = Eigen::Vector3f(rfoot_pos(0)+0.15, rfoot_pos(1)+0.45, 0);
-  near_mesh[3] = Eigen::Vector3f(rfoot_pos(0)-0.15, rfoot_pos(1)+0.45, 0);
-  combined_meshes.push_back(near_mesh);
+  // // add near mesh
+  // tf::StampedTransform transform;
+  // listener_.lookupTransform("/map", "/rleg_end_coords", ros::Time(0), transform); // map relative to rleg
+  // Eigen::Vector3f rfoot_pos;
+  // safe_footstep_util::vectorTFToEigen(transform.getOrigin(), rfoot_pos);
+  // std::vector<Eigen::Vector3f> near_mesh(4);
+  // near_mesh[0] = Eigen::Vector3f(rfoot_pos(0)-0.15, rfoot_pos(1)-0.25, 0);
+  // near_mesh[1] = Eigen::Vector3f(rfoot_pos(0)+0.15, rfoot_pos(1)-0.25, 0);
+  // near_mesh[2] = Eigen::Vector3f(rfoot_pos(0)+0.15, rfoot_pos(1)+0.45, 0);
+  // near_mesh[3] = Eigen::Vector3f(rfoot_pos(0)-0.15, rfoot_pos(1)+0.45, 0);
+  // combined_meshes.push_back(near_mesh);
 
   // convert to safe_footstep_planner::PolygonArray
   size_t combined_mesh_num(combined_meshes.size());

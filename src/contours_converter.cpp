@@ -188,6 +188,26 @@ void ContoursConverter::ContoursCallback(const opencv_apps::ContourArrayStamped:
     polygon = ContoursConverter::SortPolygonPoints(polygon);
 
   }
+  // add region rear rleg
+  {
+    geometry_msgs::Polygon polygon;
+    geometry_msgs::Point32 point;
+    point.z = 0.0;
+    point.x = -0.15;
+    point.y = -0.35;
+    polygon.points.push_back(point);
+    point.x = +0.15;
+    point.y = -0.35;
+    polygon.points.push_back(point);
+    point.x = +0.15;
+    point.y = +0.35;
+    polygon.points.push_back(point);
+    point.x = -0.15;
+    point.y = +0.35;
+    polygon.points.push_back(point);
+    polygon_array_msg.polygons.push_back(polygon);
+  }
+
   pointcloud_pub_.publish(cloud_msg);
   polygon_pub_.publish(polygon_array_msg);
 }
