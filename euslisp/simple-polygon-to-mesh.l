@@ -8,8 +8,8 @@
   (setq polygon-holes (list))
   (setq islands (list))
   ;; (format t "contours : ~A~%" (length contours))
-  (setq margin 0.03)
-  (setq inner-margin 0.03)
+  (setq margin 0.04)
+  (setq inner-margin 0.04)
   ;; (format t "margin   : ~A [m]~%" margin)
 
   (setq triangles (list))
@@ -67,7 +67,6 @@
           )
         )
       )
-
     ;; generate triangle mesh from polygon
     (setq f (instance face :init :vertices small-polygon))
     ;; ========================================================================

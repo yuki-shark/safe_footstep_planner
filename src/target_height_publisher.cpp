@@ -44,6 +44,7 @@ TargetHeightPublisher::TargetHeightPublisher() : nh_(""), pnh_("~")
 
 void TargetHeightPublisher::pointcloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg)
 {
+  std::cerr << "point" << std::endl;
     cloud_.reset(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::fromROSMsg(*msg, *cloud_);
     // std::cout << "cloud size : " << cloud_->size() << std::endl;
@@ -74,7 +75,7 @@ void TargetHeightPublisher::targetCallback(const safe_footstep_planner::OnlineFo
     Eigen::Vector3f next_foot_pos;
     next_foot_pos = cur_foot_pos + cur_foot_rot * Eigen::Vector3f(px, py, pz);
 
-    double threshold = 0.05;
+    double threshold = 0.04;
     double cur_az = 0.0, next_az = 0.0;
     int count_cur = 0, count_next = 0;
     pcl::PointXYZ pp;
@@ -108,7 +109,8 @@ void TargetHeightPublisher::targetCallback(const safe_footstep_planner::OnlineFo
         tmp_pos = cur_foot_rot.transpose() * (next_foot_pos - cur_foot_pos);
         ps.x = tmp_pos(0);
         ps.y = tmp_pos(1);
-        ps.z = tmp_pos(2);
+        double limited_h = std::max(-0.2,static_cast<double>(tmp_pos(2)));
+        ps.z = limited_h;
         ps.l_r = msg->l_r;
 
         // estimage plane by RANSAC
