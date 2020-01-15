@@ -193,19 +193,35 @@ void ContoursConverter::ContoursCallback(const opencv_apps::ContourArrayStamped:
     geometry_msgs::Polygon polygon;
     geometry_msgs::Point32 point;
     point.z = 0.0;
-    point.x = -0.15;
+    point.x = -5.00;
     point.y = -0.35;
     polygon.points.push_back(point);
-    point.x = +0.15;
+    point.x = +0.30;
     point.y = -0.35;
     polygon.points.push_back(point);
-    point.x = +0.15;
+    point.x = +0.30;
     point.y = +0.35;
     polygon.points.push_back(point);
-    point.x = -0.15;
+    point.x = -5.00;
     point.y = +0.35;
     polygon.points.push_back(point);
     polygon_array_msg.polygons.push_back(polygon);
+
+    geometry_msgs::Polygon polygon2;
+    point.z = 0.0;
+    point.x = +1.45;
+    point.y = -5.00;
+    polygon2.points.push_back(point);
+    point.x = +10.0;
+    point.y = -5.00;
+    polygon2.points.push_back(point);
+    point.x = +10.0;
+    point.y = +5.00;
+    polygon2.points.push_back(point);
+    point.x = +1.45;
+    point.y = +5.00;
+    polygon2.points.push_back(point);
+    polygon_array_msg.polygons.push_back(polygon2);
   }
 
   pointcloud_pub_.publish(cloud_msg);
