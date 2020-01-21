@@ -1,0 +1,64 @@
+#!/usr/bin/env python
+import sys
+import os
+import rospy
+import cv2
+import numpy as np
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError
+
+class calc_heightmap_gradient:
+
+  def __init__(self):
+    self.bridge       = CvBridge()
+    self.image_pub    = rospy.Publisher("/heightmap_gradient", Image, queue_size=10)
+    self.image_sub    = rospy.Subscriber("/accumulated_heightmap/output", Image, self.callback)
+    self.blur_ksize   = rospy.get_param('~blur_ksize', 5) #5
+    self.sobel_ksize  = rospy.get_param('~sobel_ksize', 15) # 15
+    self.floor_height = rospy.get_param('~floor_height', 0.04)
+    self.grad_scale   = rospy.get_param('~grad_scale', 0.000005) # 0.00002
+
+  def callback(self, data):
+    try:
+      heightmap = self.bridge.imgmsg_to_cv2(data, "64FC2")
+    except CvBridgeError as e:
+      print(e)
+
+    kernel    = np.ones((self.blur_ksize,self.blur_ksize),np.float32)/(self.blur_ksize**2)
+    heightmap = cv2.filter2D(heightmap[:,:,0], -1, kernel)
+    min_image = np.ones(heightmap.shape) * self.floor_height
+    heightmap = cv2.max(heightmap, min_image)
+
+    sobelx  = cv2.Sobel(heightmap, cv2.CV_64FC1, 1, 0, ksize=self.sobel_ksize)
+    sobely  = cv2.Sobel(heightmap, cv2.CV_64FC1, 0, 1, ksize=self.sobel_ksize)
+    sobelxy = np.sqrt(sobelx ** 2 + sobely ** 2)
+    sobelxy = sobelxy * self.grad_scale
+
+    # convert type to "32FC1"
+    heightmap_gradient = sobelxy.astype(np.float32)
+    try:
+      image_msg = self.bridge.cv2_to_imgmsg(heightmap_gradient, "32FC1")
+      image_msg.header = data.header
+      self.image_pub.publish(image_msg)
+    except CvBridgeError as e:
+      print(e)
+
+    # debug view
+    # sobelxy_uint8 = sobelxy * 255.0 / 5
+    # sobelxy_uint8 = cv2.min(sobelxy_uint8, 255)
+    # sobelxy_uint8 = sobelxy_uint8.astype(np.uint8)
+    # cv2.imshow('blur', heightmap)
+    # cv2.imshow('sobelxy', sobelxy_uint8)
+    # cv2.waitKey(0)
+
+def main(args):
+  rospy.init_node('calc_heightmap_gradient', anonymous=True)
+  hg = calc_heightmap_gradient()
+  try:
+    rospy.spin()
+  except KeyboardInterrupt:
+    print("Shutting down")
+  cv2.destroyAllWindows()
+
+if __name__ == '__main__':
+    main(sys.argv)
