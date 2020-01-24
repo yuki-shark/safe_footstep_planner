@@ -21,6 +21,10 @@ find_package(catkin REQUIRED COMPONENTS
   jsk_recognition_utils
 )
 
+generate_dynamic_reconfigure_options(
+  cfg/CalcHeightmapGradient.cfg
+)
+
 add_message_files(
   FILES
   TargetFoothold.msg

@@ -6,6 +6,8 @@ import cv2
 import numpy as np
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
+from dynamic_reconfigure.server import Server
+from safe_footstep_planner.cfg import CalcHeightmapGradientConfig as Config
 
 class calc_heightmap_gradient:
 
@@ -17,6 +19,22 @@ class calc_heightmap_gradient:
     self.sobel_ksize  = rospy.get_param('~sobel_ksize', 15) # 15
     self.floor_height = rospy.get_param('~floor_height', 0.04)
     self.grad_scale   = rospy.get_param('~grad_scale', 0.000005) # 0.00002
+    self.server       = Server(Config, self.config_callback)
+
+  def config_callback(self, config, level):
+    self.blur_ksize   = config.blur_ksize
+    self.sobel_ksize  = config.sobel_ksize
+    self.floor_height = config.floor_height
+    self.grad_scale   = config.grad_scale
+    if self.blur_ksize%2 == 0:
+      self.blur_ksize = min(self.blur_ksize + 1, 31)
+    if self.sobel_ksize%2 == 0:
+      self.sobel_ksize = min(self.sobel_ksize + 1, 31)
+    print("blur_ksize : {blur_ksize}".format(blur_ksize=self.blur_ksize))
+    print("sobel_ksize : {sobel_ksize}".format(sobel_ksize=self.sobel_ksize))
+    print("floor_height : {floor_height}".format(floor_height=self.floor_height))
+    print("grad_scale : {grad_scale}".format(grad_scale=self.grad_scale))
+    return config
 
   def callback(self, data):
     try:
@@ -42,14 +60,6 @@ class calc_heightmap_gradient:
       self.image_pub.publish(image_msg)
     except CvBridgeError as e:
       print(e)
-
-    # debug view
-    # sobelxy_uint8 = sobelxy * 255.0 / 5
-    # sobelxy_uint8 = cv2.min(sobelxy_uint8, 255)
-    # sobelxy_uint8 = sobelxy_uint8.astype(np.uint8)
-    # cv2.imshow('blur', heightmap)
-    # cv2.imshow('sobelxy', sobelxy_uint8)
-    # cv2.waitKey(0)
 
 def main(args):
   rospy.init_node('calc_heightmap_gradient', anonymous=True)
