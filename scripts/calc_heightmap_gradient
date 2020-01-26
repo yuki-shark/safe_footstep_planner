@@ -13,8 +13,8 @@ class calc_heightmap_gradient:
 
   def __init__(self):
     self.bridge       = CvBridge()
-    self.image_pub    = rospy.Publisher("/heightmap_gradient", Image, queue_size=10)
-    self.image_sub    = rospy.Subscriber("/accumulated_heightmap/output", Image, self.callback)
+    self.image_sub    = rospy.Subscriber("~input", Image, self.callback)
+    self.image_pub    = rospy.Publisher("~output", Image, queue_size=10)
     self.blur_ksize   = rospy.get_param('~blur_ksize', 5) #5
     self.sobel_ksize  = rospy.get_param('~sobel_ksize', 15) # 15
     self.floor_height = rospy.get_param('~floor_height', 0.04)
