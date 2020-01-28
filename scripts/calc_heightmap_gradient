@@ -17,6 +17,7 @@ class calc_heightmap_gradient:
     self.image_pub    = rospy.Publisher("~output", Image, queue_size=10)
     self.blur_ksize   = rospy.get_param('~blur_ksize', 5) #5
     self.sobel_ksize  = rospy.get_param('~sobel_ksize', 15) # 15
+    self.erode_ksize  = rospy.get_param('~erode_ksize', 11) # 11
     self.floor_height = rospy.get_param('~floor_height', 0.04)
     self.grad_scale   = rospy.get_param('~grad_scale', 0.000005) # 0.00002
     self.server       = Server(Config, self.config_callback)
@@ -24,14 +25,17 @@ class calc_heightmap_gradient:
   def config_callback(self, config, level):
     self.blur_ksize   = config.blur_ksize
     self.sobel_ksize  = config.sobel_ksize
+    self.erode_ksize  = config.erode_ksize
     self.floor_height = config.floor_height
     self.grad_scale   = config.grad_scale
     if self.blur_ksize%2 == 0:
       self.blur_ksize = min(self.blur_ksize + 1, 31)
     if self.sobel_ksize%2 == 0:
       self.sobel_ksize = min(self.sobel_ksize + 1, 31)
+    self.erode_ksize = min(self.erode_ksize, 100)
     print("blur_ksize : {blur_ksize}".format(blur_ksize=self.blur_ksize))
     print("sobel_ksize : {sobel_ksize}".format(sobel_ksize=self.sobel_ksize))
+    print("erode_ksize : {erode_ksize}".format(erode_ksize=self.erode_ksize))
     print("floor_height : {floor_height}".format(floor_height=self.floor_height))
     print("grad_scale : {grad_scale}".format(grad_scale=self.grad_scale))
     return config
@@ -50,7 +54,9 @@ class calc_heightmap_gradient:
     sobelx  = cv2.Sobel(heightmap, cv2.CV_64FC1, 1, 0, ksize=self.sobel_ksize)
     sobely  = cv2.Sobel(heightmap, cv2.CV_64FC1, 0, 1, ksize=self.sobel_ksize)
     sobelxy = np.sqrt(sobelx ** 2 + sobely ** 2)
-    sobelxy = sobelxy * self.grad_scale
+    sobelxy = np.arctan2(sobelxy, np.ones(len(sobelxy)) * self.grad_scale) * 255 / 90
+    sobelxy = cv2.erode(sobelxy, np.ones((self.erode_ksize, self.erode_ksize), np.float32))
+    # sobelxy = sobelxy * self.grad_scale
 
     # convert type to "32FC1"
     heightmap_gradient = sobelxy.astype(np.float32)
