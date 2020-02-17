@@ -1,0 +1,124 @@
+#!/usr/bin/env python
+# from __future__ import print_function
+
+import sys
+import os
+import rospy
+import rospkg
+from safe_footstep_planner.msg import PolygonArray
+from geometry_msgs.msg import Polygon, Point32
+from sensor_msgs.msg import PointCloud
+
+rospy.init_node("known_steppable_contour_publisher", anonymous=True)
+p = rospy.Publisher("/steppable_polygons", PolygonArray, queue_size=10)
+cloud_pub = rospy.Publisher("/steppable_polygons_cloud", PointCloud, queue_size=10)
+r = rospy.Rate(100)
+
+offset_x = 1.5
+offset_y = 0.0
+
+pa_msg = PolygonArray()
+
+# Step front
+polygon = Polygon()
+polygon.points.append(Point32(offset_x - 2.0, offset_y + 1.0, 0.0))
+polygon.points.append(Point32(offset_x + 2.7, offset_y + 1.0, 0.0))
+polygon.points.append(Point32(offset_x + 2.7, offset_y - 0.2, 0.0))
+polygon.points.append(Point32(offset_x - 2.0, offset_y - 0.2, 0.0))
+pa_msg.polygons.append(polygon)
+# Step
+polygon = Polygon()
+polygon.points.append(Point32(offset_x + 2.8, offset_y + 0.2, 0.0))
+polygon.points.append(Point32(offset_x + 3.2, offset_y + 0.2, 0.0))
+polygon.points.append(Point32(offset_x + 3.2, offset_y - 0.2, 0.0))
+polygon.points.append(Point32(offset_x + 2.8, offset_y - 0.2, 0.0))
+pa_msg.polygons.append(polygon)
+# Step back
+polygon = Polygon()
+polygon.points.append(Point32(offset_x + 3.4, offset_y + 1.0, 0.0))
+polygon.points.append(Point32(offset_x + 6.0, offset_y + 1.0, 0.0))
+polygon.points.append(Point32(offset_x + 6.0, offset_y - 0.2, 0.0))
+polygon.points.append(Point32(offset_x + 3.4, offset_y - 0.2, 0.0))
+pa_msg.polygons.append(polygon)
+# Stones front
+polygon = Polygon()
+polygon.points.append(Point32(offset_x - 2.0, offset_y - 2.8, 0.0))
+polygon.points.append(Point32(offset_x + 2.1, offset_y - 2.8, 0.0))
+polygon.points.append(Point32(offset_x + 2.1, offset_y - 0.2, 0.0))
+polygon.points.append(Point32(offset_x - 2.0, offset_y - 0.2, 0.0))
+pa_msg.polygons.append(polygon)
+# Stones 1
+polygon = Polygon()
+polygon.points.append(Point32(offset_x + 2.4, offset_y - 1.9, 0.0))
+polygon.points.append(Point32(offset_x + 2.45,offset_y - 1.9, 0.0))
+polygon.points.append(Point32(offset_x + 2.45,offset_y - 1.2, 0.0))
+polygon.points.append(Point32(offset_x + 2.4, offset_y - 1.2, 0.0))
+pa_msg.polygons.append(polygon)
+# Stones 2
+polygon = Polygon()
+polygon.points.append(Point32(offset_x + 2.65,offset_y - 1.9, 0.0))
+polygon.points.append(Point32(offset_x + 2.85,offset_y - 1.9, 0.0))
+polygon.points.append(Point32(offset_x + 2.85,offset_y - 1.2, 0.0))
+polygon.points.append(Point32(offset_x + 2.65,offset_y - 1.2, 0.0))
+pa_msg.polygons.append(polygon)
+# Stones 3
+polygon = Polygon()
+polygon.points.append(Point32(offset_x + 3.15,offset_y - 1.9, 0.0))
+polygon.points.append(Point32(offset_x + 3.35,offset_y - 1.9, 0.0))
+polygon.points.append(Point32(offset_x + 3.35,offset_y - 1.2, 0.0))
+polygon.points.append(Point32(offset_x + 3.15,offset_y - 1.2, 0.0))
+pa_msg.polygons.append(polygon)
+# Stones 4
+polygon = Polygon()
+polygon.points.append(Point32(offset_x + 3.55,offset_y - 1.9, 0.0))
+polygon.points.append(Point32(offset_x + 3.6, offset_y - 1.9, 0.0))
+polygon.points.append(Point32(offset_x + 3.6, offset_y - 1.2, 0.0))
+polygon.points.append(Point32(offset_x + 3.55,offset_y - 1.2, 0.0))
+pa_msg.polygons.append(polygon)
+# Stones back
+polygon = Polygon()
+polygon.points.append(Point32(offset_x + 3.9, offset_y - 2.8, 0.0))
+polygon.points.append(Point32(offset_x + 6.0, offset_y - 2.8, 0.0))
+polygon.points.append(Point32(offset_x + 6.0, offset_y - 0.2, 0.0))
+polygon.points.append(Point32(offset_x + 3.9, offset_y - 0.2, 0.0))
+pa_msg.polygons.append(polygon)
+# Nothing
+polygon = Polygon()
+polygon.points.append(Point32(offset_x - 2.0, offset_y - 2.8, 0.0))
+polygon.points.append(Point32(offset_x + 6.0, offset_y - 2.8, 0.0))
+polygon.points.append(Point32(offset_x + 6.0, offset_y - 3.5, 0.0))
+polygon.points.append(Point32(offset_x - 2.0, offset_y - 3.5, 0.0))
+pa_msg.polygons.append(polygon)
+
+# # Nothing front
+# polygon = Polygon()
+# polygon.points.append(Point32(-2.0, -1.75, 0.0))
+# polygon.points.append(Point32( 2.6, -1.75, 0.0))
+# polygon.points.append(Point32( 2.6, -3.5, 0.0))
+# polygon.points.append(Point32(-2.0, -3.5, 0.0))
+# pa_msg.polygons.append(polygon)
+# # Nothing middle
+# polygon = Polygon()
+# polygon.points.append(Point32( 2.6, -2.5, 0.0))
+# polygon.points.append(Point32( 3.4, -2.5, 0.0))
+# polygon.points.append(Point32( 3.4, -3.5, 0.0))
+# polygon.points.append(Point32( 2.6, -3.5, 0.0))
+# pa_msg.polygons.append(polygon)
+# # Nothing back
+# polygon = Polygon()
+# polygon.points.append(Point32( 3.4, -1.75, 0.0))
+# polygon.points.append(Point32( 6.0, -1.75, 0.0))
+# polygon.points.append(Point32( 6.0, -3.5, 0.0))
+# polygon.points.append(Point32( 3.4, -3.5, 0.0))
+# pa_msg.polygons.append(polygon)
+
+cloud_msg = PointCloud()
+cloud_msg.header.frame_id = '/map'
+for pg in pa_msg.polygons:
+  for point in pg.points:
+    cloud_msg.points.append(point)
+
+while not rospy.is_shutdown():
+  p.publish(pa_msg)
+  cloud_pub.publish(cloud_msg)
+  r.sleep()

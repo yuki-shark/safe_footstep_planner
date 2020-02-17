@@ -1,0 +1,28 @@
+<launch>
+  <arg name="MANAGER" default="steppable_region_choreonoid" />
+  <arg name="rviz" default="true" />
+
+  <node name="known_steppable_contour_publisher" pkg="safe_footstep_planner" type="known_steppable_contour_publisher" />
+  <node name="simple_polygon_to_mesh" pkg="safe_footstep_planner" type="simple-polygon-to-mesh.l" output="screen"/>
+  <node name="mesh_pub_booster" pkg="safe_footstep_planner" type="mesh_pub_booster" output="screen"/>
+  <node name="steppable_region_publisher" pkg="safe_footstep_planner" type="steppable_region_publisher" />
+
+  <node name="draw_meshes" pkg="safe_footstep_planner" type="draw_meshes.l" output="screen"/>
+
+  <node name="target_height_publisher" pkg="safe_footstep_planner" type="target_height_publisher" output="screen"/>
+
+  <node name="$(arg MANAGER)"
+        pkg="nodelet" type="nodelet"
+        args="manager" />
+
+  <node name="accumulated_heightmap_pointcloud_maprelative"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_pcl_utils/TfTransformCloud /$(arg MANAGER)">
+    <remap from="~input" to="accumulated_heightmap_pointcloud/output" />
+    <rosparam>
+      target_frame_id: map
+    </rosparam>
+  </node>
+
+
+</launch>
