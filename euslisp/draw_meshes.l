@@ -37,6 +37,7 @@
 (ros::roseus "draw_polygons")
 (ros::subscribe "combined_meshed_polygons" safe_footstep_planner::PolygonArray #'callback 1)
 (do-until-key
+ (x::window-main-one)
  (ros::spin-once))
 (format t "Shutdown Controller~%")
 
