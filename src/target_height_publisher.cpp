@@ -40,11 +40,11 @@ TargetHeightPublisher::TargetHeightPublisher() : nh_(""), pnh_("~")
     height_publisher_ = nh_.advertise<safe_footstep_planner::OnlineFootStep>("landing_height", 1);
     cloud_sub_ = nh_.subscribe("accumulated_heightmap_pointcloud_maprelative/output", 1, &TargetHeightPublisher::pointcloudCallback, this);
     target_sub_ = nh_.subscribe("landing_target", 1, &TargetHeightPublisher::targetCallback, this);
+    // std::cerr << "TargetHeihgtPublisher Initialized!!!!!! " << std::endl;
 }
 
 void TargetHeightPublisher::pointcloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg)
 {
-  std::cerr << "point" << std::endl;
     cloud_.reset(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::fromROSMsg(*msg, *cloud_);
     // std::cout << "cloud size : " << cloud_->size() << std::endl;
@@ -55,7 +55,7 @@ void TargetHeightPublisher::targetCallback(const safe_footstep_planner::OnlineFo
     double px = msg->x;
     double py = msg->y;
     double pz = msg->z;
-
+    // std::cerr << "hoge: " << std::endl;
     // transform
     std::string target_frame;
     if (msg->l_r) {
@@ -78,6 +78,7 @@ void TargetHeightPublisher::targetCallback(const safe_footstep_planner::OnlineFo
     double threshold = 0.04;
     double cur_az = 0.0, next_az = 0.0;
     int count_cur = 0, count_next = 0;
+    std::vector<double>  next_az_vec, cur_az_vec;
     pcl::PointXYZ pp;
     pcl::PointIndices::Ptr indices (new pcl::PointIndices);
 
@@ -89,65 +90,86 @@ void TargetHeightPublisher::targetCallback(const safe_footstep_planner::OnlineFo
                 next_az += pp.z;
                 count_next++;
                 indices->indices.push_back(i);
+                next_az_vec.push_back(pp.z);
             }
             if (std::fabs(pp.x - cur_foot_pos(0)) < threshold &&
                 std::fabs(pp.y - cur_foot_pos(1)) < threshold) {
-              cur_az += pp.z;
-              count_cur++;
+                cur_az += pp.z;
+                count_cur++;
+                cur_az_vec.push_back(pp.z);
             }
         }
         // ROS_INFO("x: %f  y: %f  z: %f,  rel_pos x: %f  rel_pos y: %f, az/count: %f", landing_pos.getX(), landing_pos.getY(), landing_pos.getZ(), rel_landing_pos.getX(), rel_landing_pos.getY(), az / count);
 
         // publish point
-        safe_footstep_planner::OnlineFootStep ps;
-        std_msgs::Header header;
-        header.frame_id = target_frame.substr(1, target_frame.length() - 1);
-        ps.header = header;
-        Eigen::Vector3f tmp_pos;
-        cur_foot_pos(2) = cur_az / static_cast<double>(count_cur);
-        next_foot_pos(2) = next_az / static_cast<double>(count_next);
-        tmp_pos = cur_foot_rot.transpose() * (next_foot_pos - cur_foot_pos);
-        ps.x = tmp_pos(0);
-        ps.y = tmp_pos(1);
-        double limited_h = std::max(-0.2,static_cast<double>(tmp_pos(2)));
-        ps.z = limited_h;
-        ps.l_r = msg->l_r;
+        if (count_next > 0 && count_cur > 0) {
+            safe_footstep_planner::OnlineFootStep ps;
+            std_msgs::Header header;
+            header.frame_id = target_frame.substr(1, target_frame.length() - 1);
+            ps.header = header;
 
-        // estimage plane by RANSAC
-        int minimun_indices = 10;
-        pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
-        pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
-        pcl::SACSegmentation<pcl::PointXYZ> seg;
-        seg.setOptimizeCoefficients (true);
-        seg.setRadiusLimits(0.01, std::numeric_limits<double>::max ());
-        seg.setMethodType(pcl::SAC_RANSAC);
-        seg.setDistanceThreshold(0.1);
-        seg.setModelType(pcl::SACMODEL_PLANE);
-        seg.setInputCloud(cloud_);
-        //
-        seg.setIndices(indices);
-        seg.setMaxIterations(100);
-        seg.segment(*inliers, *coefficients);
+            // mean
+            // cur_foot_pos(2) = cur_az / static_cast<double>(count_cur);
+            // next_foot_pos(2) = next_az / static_cast<double>(count_next);
+            // median
+            std::sort(next_az_vec.begin(), next_az_vec.end());
+            std::sort(cur_az_vec.begin(), cur_az_vec.end());
+            cur_foot_pos(2) = cur_az_vec[cur_az_vec.size()/2];
+            next_foot_pos(2) = next_az_vec[next_az_vec.size()/2];
 
-        if (inliers->indices.size() == 0) {
-            std::cerr <<  " no plane" << std::endl;
-        }
-        else if (inliers->indices.size() < minimun_indices) {
-            std::cerr <<  " no enough inliners " << inliers->indices.size() <<  std::endl;
-        }
-        else {
-            jsk_recognition_utils::Plane plane(coefficients->values);
-              if (!plane.isSameDirection(ez)) {
-                plane = plane.flip();
+            Eigen::Vector3f tmp_pos;
+            tmp_pos = cur_foot_rot.transpose() * (next_foot_pos - cur_foot_pos);
+            ps.x = tmp_pos(0);
+            ps.y = tmp_pos(1);
+            double limited_h = std::max(-0.2,static_cast<double>(tmp_pos(2)));
+            ps.z = limited_h;
+            ps.l_r = msg->l_r;
+            // std::cerr << "height: " << limited_h << std::endl;
+
+            // estimage plane by RANSAC
+            int minimun_indices = 10;
+            pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+            pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+            pcl::SACSegmentation<pcl::PointXYZ> seg;
+            seg.setOptimizeCoefficients (true);
+            seg.setRadiusLimits(0.01, std::numeric_limits<double>::max ());
+            seg.setMethodType(pcl::SAC_RANSAC);
+            seg.setDistanceThreshold(0.1);
+            seg.setModelType(pcl::SACMODEL_PLANE);
+            seg.setInputCloud(cloud_);
+            //
+            seg.setIndices(indices);
+            seg.setMaxIterations(100);
+            seg.segment(*inliers, *coefficients);
+
+            if (inliers->indices.size() == 0) {
+                std::cerr <<  " no plane" << std::endl;
             }
-            Eigen::Vector3f next_n = plane.getNormal();
-            next_n = cur_foot_rot.transpose() * next_n; // cur_foot relative
+            else if (inliers->indices.size() < minimun_indices) {
+                std::cerr <<  " no enough inliners " << inliers->indices.size() <<  std::endl;
+            }
+            else {
+                jsk_recognition_utils::Plane plane(coefficients->values);
+                if (!plane.isSameDirection(ez)) {
+                    plane = plane.flip();
+                }
+                Eigen::Vector3f next_n = plane.getNormal();
+                next_n = cur_foot_rot.transpose() * next_n; // cur_foot relative
 
-            ps.nx =  next_n(0);
-            ps.ny =  next_n(1);
-            ps.nz =  next_n(2);
+                // ps.nx =  next_n(0);
+                // ps.ny =  next_n(1);
+                // ps.nz =  next_n(2);
+                ps.nx =  0;
+                ps.ny =  0;
+                ps.nz =  1;
+            }
+            // ======= omori add 2020/02/16 ===========
+            ps.nx =  0;
+            ps.ny =  0;
+            ps.nz =  1;
+            // ========================================
+            height_publisher_.publish(ps);
         }
-        height_publisher_.publish(ps);
     }
 }
 
@@ -155,6 +177,7 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "target_height_publisher");
     TargetHeightPublisher target_height_publisher;
+    ros::Duration(5);
     ros::spin();
 
     return 0;
