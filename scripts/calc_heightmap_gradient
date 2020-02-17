@@ -15,11 +15,23 @@ class calc_heightmap_gradient:
     self.bridge       = CvBridge()
     self.image_sub    = rospy.Subscriber("~input", Image, self.callback)
     self.image_pub    = rospy.Publisher("~output", Image, queue_size=10)
+
+    self.heightmap_pub  = rospy.Publisher("~heightmap", Image, queue_size=10)
+    self.diff_pub    = rospy.Publisher("~diff", Image, queue_size=10)
+    self.mod_pub    = rospy.Publisher("~mod", Image, queue_size=10)
+
     self.blur_ksize   = rospy.get_param('~blur_ksize', 5) #5
     self.sobel_ksize  = rospy.get_param('~sobel_ksize', 15) # 15
     self.erode_ksize  = rospy.get_param('~erode_ksize', 11) # 11
     self.floor_height = rospy.get_param('~floor_height', 0.04)
     self.grad_scale   = rospy.get_param('~grad_scale', 0.000005) # 0.00002
+
+    self.use_height_layer  = rospy.get_param('~use_height_layer', False)
+    self.height_ksize = rospy.get_param('~height_ksize', 5)
+    self.grad_th      = rospy.get_param('~grad_th', 10)
+    self.height_th    = rospy.get_param('~height_th', 0.05)
+    self.height_cost  = rospy.get_param('~height_cost', 20)
+
     self.server       = Server(Config, self.config_callback)
 
   def config_callback(self, config, level):
@@ -32,12 +44,26 @@ class calc_heightmap_gradient:
       self.blur_ksize = min(self.blur_ksize + 1, 31)
     if self.sobel_ksize%2 == 0:
       self.sobel_ksize = min(self.sobel_ksize + 1, 31)
+    self.use_height_layer = config.use_height_layer
+    self.height_ksize     = config.height_ksize
+    self.grad_th          = config.grad_th
+    self.height_th        = config.height_th
+    self.height_cost      = config.height_cost
+    if self.height_ksize%2 == 0:
+      self.height_ksize = min(self.height_ksize + 1, 31)
+
     self.erode_ksize = min(self.erode_ksize, 100)
     print("blur_ksize : {blur_ksize}".format(blur_ksize=self.blur_ksize))
     print("sobel_ksize : {sobel_ksize}".format(sobel_ksize=self.sobel_ksize))
     print("erode_ksize : {erode_ksize}".format(erode_ksize=self.erode_ksize))
     print("floor_height : {floor_height}".format(floor_height=self.floor_height))
     print("grad_scale : {grad_scale}".format(grad_scale=self.grad_scale))
+
+    print("use_height_layer : {use_height_layer}".format(use_height_layer=str(self.use_height_layer)))
+    print("height_ksize : {height_ksize}".format(height_ksize=self.height_ksize))
+    print("grad_th : {grad_th}".format(grad_th=self.grad_th))
+    print("height_th : {height_th}".format(height_th=self.height_th))
+    print("height_cost : {height_cost}".format(height_cost=self.height_cost))
     return config
 
   def callback(self, data):
@@ -46,17 +72,53 @@ class calc_heightmap_gradient:
     except CvBridgeError as e:
       print(e)
 
-    kernel    = np.ones((self.blur_ksize,self.blur_ksize),np.float32)/(self.blur_ksize**2)
-    heightmap = cv2.filter2D(heightmap[:,:,0], -1, kernel)
+    # heightmap = cv2.filter2D(heightmap[:,:,0], -1, kernel)
+    # heightmap = cv2.dilate(heightmap[:,:,0], np.ones((self.height_ksize, self.height_ksize), np.float32))
+    heightmap = cv2.dilate(heightmap[:,:,0], np.ones((self.height_ksize, self.height_ksize), np.float64))
+    kernel = np.ones((self.blur_ksize,self.blur_ksize),np.float32)/(self.blur_ksize**2)
+    heightmap = cv2.filter2D(heightmap, -1, kernel)
+
     min_image = np.ones(heightmap.shape) * self.floor_height
     heightmap = cv2.max(heightmap, min_image)
 
     sobelx  = cv2.Sobel(heightmap, cv2.CV_64FC1, 1, 0, ksize=self.sobel_ksize)
     sobely  = cv2.Sobel(heightmap, cv2.CV_64FC1, 0, 1, ksize=self.sobel_ksize)
     sobelxy = np.sqrt(sobelx ** 2 + sobely ** 2)
-    sobelxy = np.arctan2(sobelxy, np.ones(len(sobelxy)) * self.grad_scale) * 255 / 90
-    sobelxy = cv2.erode(sobelxy, np.ones((self.erode_ksize, self.erode_ksize), np.float32))
+    sobelxy = np.arctan2(sobelxy, np.ones(len(sobelxy)) * self.grad_scale) * 90 / 3.1415926535
+    # sobelxy = cv2.erode(sobelxy, np.ones((self.erode_ksize, self.erode_ksize), np.float32))
     # sobelxy = sobelxy * self.grad_scale
+
+    # self.use_height_layer = False
+    # self.use_height_layer = True
+    # self.height_ksize = 5
+    # self.grad_th = 10
+    # self.height_th = 0.05
+    # self.height_cost = 0
+
+    if self.use_height_layer:
+      height_max = cv2.dilate(heightmap, np.ones((self.height_ksize, self.height_ksize), np.float32))
+      height_min = cv2.erode(heightmap, np.ones((self.height_ksize, self.height_ksize), np.float32))
+      height_diff = height_max - height_min
+      # print("diff_max : {diff_max}".format(diff_max=height_diff.max()))
+      # print("diff_min : {diff_min}".format(diff_min=height_diff.min()))
+      # extract over grad_th
+      # print("sobelxy_max : {sobelxy_max}".format(sobelxy_max=sobelxy.max()))
+      # print("sobelxy_min : {sobelxy_min}".format(sobelxy_min=sobelxy.min()))
+      high_cost = cv2.min(cv2.max(sobelxy - self.grad_th, 0), 1)
+      # print("high_cost_max : {high_cost_max}".format(high_cost_max=high_cost.max()))
+      # print("high_cost_min : {high_cost_min}".format(high_cost_min=high_cost.min()))
+      height_layer = height_diff * high_cost
+      # print("height_layer_max : {height_layer_max}".format(height_layer_max=height_layer.max()))
+      # print("height_layer_min : {height_layer_min}".format(height_layer_min=height_layer.min()))
+      too_high_cost = cv2.min(np.ceil(cv2.max(height_layer - self.height_th, 0)), 1)
+      # print("too_high_cost_max : {too_high_cost_max}".format(too_high_cost_max=too_high_cost.max()))
+      # print("too_high_cost_min : {too_high_cost_min}".format(too_high_cost_min=too_high_cost.min()))
+      modify_pixel = np.ceil(high_cost - too_high_cost - 0.01)
+      modify_pixel = cv2.dilate(modify_pixel, np.ones((3, 3), np.int8))
+      # print("mod_max : {mod_max}".format(mod_max=modify_pixel.max()))
+      # print("mod_min : {mod_min}".format(mod_min=modify_pixel.min()))
+      sobelxy = modify_pixel * cv2.min(self.height_cost, sobelxy) + (1 - modify_pixel) * sobelxy
+      sobelxy = cv2.dilate(sobelxy, np.ones((self.height_ksize, self.height_ksize), np.float32))
 
     # convert type to "32FC1"
     heightmap_gradient = sobelxy.astype(np.float32)
@@ -66,6 +128,32 @@ class calc_heightmap_gradient:
       self.image_pub.publish(image_msg)
     except CvBridgeError as e:
       print(e)
+
+    # for debug
+    try:
+      heightmap *= 40
+      heightmap_msg = self.bridge.cv2_to_imgmsg(heightmap.astype(np.float32), "32FC1")
+      heightmap_msg.header = data.header
+      self.heightmap_pub.publish(heightmap_msg)
+    except CvBridgeError as e:
+      print(e)
+
+    if self.use_height_layer:
+      try:
+        height_diff *= 40
+        diff_msg = self.bridge.cv2_to_imgmsg(height_diff.astype(np.float32), "32FC1")
+        diff_msg.header = data.header
+        self.diff_pub.publish(diff_msg)
+      except CvBridgeError as e:
+        print(e)
+
+      try:
+        modify_pixel *= 40
+        mod_msg = self.bridge.cv2_to_imgmsg(modify_pixel.astype(np.float32), "32FC1")
+        mod_msg.header = data.header
+        self.mod_pub.publish(mod_msg)
+      except CvBridgeError as e:
+        print(e)
 
 def main(args):
   rospy.init_node('calc_heightmap_gradient', anonymous=True)
