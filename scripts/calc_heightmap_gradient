@@ -32,6 +32,8 @@ class calc_heightmap_gradient:
     self.height_th    = rospy.get_param('~height_th', 0.05)
     self.height_cost  = rospy.get_param('~height_cost', 20)
 
+    self.heightmap_data = None
+
     self.server       = Server(Config, self.config_callback)
 
   def config_callback(self, config, level):
@@ -64,9 +66,23 @@ class calc_heightmap_gradient:
     print("grad_th : {grad_th}".format(grad_th=self.grad_th))
     print("height_th : {height_th}".format(height_th=self.height_th))
     print("height_cost : {height_cost}".format(height_cost=self.height_cost))
+
+    if self.heightmap_data is not None:
+      self.update_heightmap_gradient()
+    else:
+      print("heightmap not subscribed!")
+
     return config
 
   def callback(self, data):
+    self.heightmap_data = data
+    if self.heightmap_data is not None:
+      self.update_heightmap_gradient()
+    else:
+      print("heightmap not subscribed!")
+
+  def update_heightmap_gradient(self):
+    data = self.heightmap_data
     try:
       heightmap = self.bridge.imgmsg_to_cv2(data, "64FC2")
     except CvBridgeError as e:
