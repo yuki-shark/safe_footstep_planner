@@ -1,0 +1,45 @@
+#!/usr/bin/env python
+
+import rospy
+from std_msgs.msg import Int32 as Int32Msg
+from dynamic_reconfigure.msg import Config as ConfigMsg
+from dynamic_reconfigure.msg import DoubleParameter as DoubleParameterMsg
+from dynamic_reconfigure.srv import Reconfigure as ReconfigureSrv
+import subprocess
+import copy
+
+def callback(msg):
+    global last_update_time
+    if msg.data == 1:
+        cur_time = rospy.get_rostime()
+        if (cur_time.secs - last_update_time.secs) < 0.5:
+            return
+        last_update_time = copy.copy(cur_time)
+
+        rospy.loginfo("Update grad scale")
+        global_gradient_srv = rospy.ServiceProxy("/move_base/global_costmap/gradient/set_parameters", ReconfigureSrv)
+        local_gradient_srv  = rospy.ServiceProxy("/move_base/local_costmap/gradient/set_parameters",  ReconfigureSrv)
+        try:
+            cur_config = global_gradient_srv()
+            for item in cur_config.config.doubles:
+                if item.name == 'cost_scale':
+                    current_cost_scale = item.value
+            print(current_cost_scale)
+            new_cost_scale = current_cost_scale + 4.0
+            # new_cost_scale = current_cost_scale + 6.0
+            # new_cost_scale = current_cost_scale + 40.0
+            config = ConfigMsg(doubles = [DoubleParameterMsg("cost_scale", new_cost_scale)])
+            try:
+                new_global_config = global_gradient_srv(config)
+                new_local_config = local_gradient_srv(config)
+            except:
+                rospy.logerr("Failed to set new grad scale")
+
+        except:
+            rospy.logerr("Failed to get current config")
+
+if __name__ == "__main__":
+    rospy.init_node("grad_scale_updater")
+    last_update_time = rospy.get_rostime()
+    sub = rospy.Subscriber("/is_stuck", Int32Msg, callback, queue_size=1)
+    rospy.spin()
