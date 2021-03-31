@@ -56,7 +56,9 @@ void SteppableRegionPublisher::targetCallback(const safe_footstep_planner::Onlin
   }
 
   tf::StampedTransform transform;
-  listener_.lookupTransform("/map", target_frame, ros::Time(0), transform); // map relative to target_frame
+  // listener_.lookupTransform("/body_on_odom", target_frame, ros::Time(0), transform); // map relative to target_frame
+  listener_.lookupTransform("/odom_ground", target_frame, ros::Time(0), transform); // map relative to target_frame
+  // listener_.lookupTransform(combined_meshes_.header.frame_id, target_frame, ros::Time(0), transform); // map relative to target_frame
   Eigen::Vector3f cur_foot_pos, ez(Eigen::Vector3f::UnitZ());
   safe_footstep_util::vectorTFToEigen(transform.getOrigin(), cur_foot_pos);
   Eigen::Matrix3f tmp_cur_foot_rot, cur_foot_rot;
@@ -76,6 +78,8 @@ void SteppableRegionPublisher::targetCallback(const safe_footstep_planner::Onlin
 
   std_msgs::Header header;
   header.frame_id = target_frame.substr(1, target_frame.length() - 1);
+  // header.stamp = ros::Time::now();
+  header.stamp = ros::Time(0);
   sr.header = header;
   sr.l_r = msg->l_r;
 
@@ -103,6 +107,7 @@ void SteppableRegionPublisher::meshCallback(const safe_footstep_planner::Polygon
 
   // debug
   // size_t mesh_num(4);
+  // size_t mesh_num(2);
   // std::vector<bool> is_combined(mesh_num, false);
   // meshes.resize(mesh_num);
   // meshes[0].push_back(Eigen::Vector3f(0, 0, 0));
@@ -123,6 +128,18 @@ void SteppableRegionPublisher::meshCallback(const safe_footstep_planner::Polygon
   // meshes[0].push_back(Eigen::Vector3f(1000, 700, 0));
   // meshes[0].push_back(Eigen::Vector3f(650, 850, 0));
   // meshes[0].push_back(Eigen::Vector3f(400, 800, 0));
+  // meshes[0].push_back(Eigen::Vector3f(-0.5, -1, 0));
+  // meshes[0].push_back(Eigen::Vector3f(-0.5, 1, 0));
+  // meshes[0].push_back(Eigen::Vector3f(0.5, 1, 0));
+  // meshes[1].push_back(Eigen::Vector3f(-0.5, -1, 0));
+  // meshes[1].push_back(Eigen::Vector3f(0.5, 1, 0));
+  // meshes[1].push_back(Eigen::Vector3f(0.5, -1, 0));
+  // meshes[2].push_back(Eigen::Vector3f(700, -1000, 0));
+  // meshes[2].push_back(Eigen::Vector3f(700, 1000, 0));
+  // meshes[2].push_back(Eigen::Vector3f(1200, 1000, 0));
+  // meshes[3].push_back(Eigen::Vector3f(1200, 1000, 0));
+  // meshes[3].push_back(Eigen::Vector3f(1200, -1000, 0));
+  // meshes[3].push_back(Eigen::Vector3f(700, -1000, 0));
 
   // combine meshes
   for (size_t i = 0; i < meshes.size(); i++) {
@@ -196,4 +213,3 @@ int main(int argc, char **argv)
 
   return 0;
 }
-
